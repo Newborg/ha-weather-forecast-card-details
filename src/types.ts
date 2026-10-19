@@ -130,7 +130,7 @@ export interface WeatherForecastCardForecastActionConfig {
 }
 
 export interface WeatherForecastCardConfig {
-  type: "custom:weather-forecast-card";
+  type: "custom:weather-forecast-card-details";
   entity: string;
   name?: EntityName;
   /** @deprecated Use `current.temperature_entity` instead */

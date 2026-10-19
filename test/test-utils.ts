@@ -25,10 +25,10 @@ export const createWeatherForecastCardTestFixture = async (
   options?: TestFixtureOptions
 ): Promise<TestFixtureResult> => {
   const card = await fixture<WeatherForecastCard>(html`
-    <weather-forecast-card
+    <weather-forecast-card-details
       .hass=${hass}
       .config=${config}
-    ></weather-forecast-card>
+    ></weather-forecast-card-details>
   `);
 
   expect(card).not.toBeNull();

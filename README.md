@@ -9,9 +9,14 @@
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge&labelColor=000"></a>
 </div>
 
-# Weather Forecast Card
+# Weather Forecast Card Details
 
 A custom weather card for Home Assistant that displays current weather and forecast in a scrollable horizontal list or chart.
+
+> [!IMPORTANT]
+> This is a personal fork of [troinine/ha-weather-forecast-card](https://github.com/troinine/ha-weather-forecast-card). It is installed as `custom:weather-forecast-card-details`.
+>
+> The fork shares internal element names with the original card, so do not load both cards at the same time.
 
 > [!NOTE]
 > This card is under active development and primarily built for my personal use cases but if you find it useful, feel free to use and share feedback!
@@ -40,28 +45,24 @@ This card takes inspiration from [Weather Forecast Extended Card](https://github
 
 ### HACS (recommended)
 
-The card is available in [HACS](https://hacs.xyz/) (Home Assistant Community Store). Use the following link to directly go to the repository in HACS:
+This fork is installed in [HACS](https://hacs.xyz/) (Home Assistant Community Store) as a custom repository:
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=troinine&repository=ha-weather-forecast-card&category=Dashboard)
-
-Or manually:
-
-1. Open Home Assistant
-2. Go to **Settings** → **Devices & Services** → **HACS**
-3. Search for "Weather Forecast Card"
-4. Click "Download"
+1. If the original Weather Forecast Card is installed, remove it from HACS first
+2. Open HACS, select the three-dot menu in the top right corner and choose **Custom repositories**
+3. Add `https://github.com/Newborg/ha-weather-forecast-card-details` with the type **Dashboard**
+4. Search for "Weather Forecast Card Details" and click "Download"
 
 You can now add the card to your dashboard by clicking "Edit dashboard" from the top right corner. You may need to clear your browser cache.
 
 ### Manual Installation
 
-1. Download the latest `weather-forecast-card.js` from the [releases page](https://github.com/troinine/ha-weather-forecast-card/releases)
+1. Download the latest `weather-forecast-card-details.js` from the [releases page](https://github.com/Newborg/ha-weather-forecast-card-details/releases)
 2. Copy it to your `config/www` folder
 3. Add the resource to your Lovelace configuration:
 
 ```yaml
 resources:
-  - url: /local/weather-forecast-card.js
+  - url: /local/weather-forecast-card-details.js
     type: module
 ```
 
@@ -71,7 +72,7 @@ resources:
 
 | Name                     | Type              | Default      | Description                                                                                                                                                                       |
 | :----------------------- | :---------------- | :----------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `type`                   | `string`          | **Required** | `custom:weather-forecast-card`                                                                                                                                                    |
+| `type`                   | `string`          | **Required** | `custom:weather-forecast-card-details`                                                                                                                                            |
 | `entity`                 | `string`          | **Required** | The weather entity id (e.g., `weather.home`).                                                                                                                                     |
 | `name`                   | `string`/`array`  | optional     | Name to display. Defaults to the entity's own name. Can also be a list of name parts to compose it from, see [Name](#name).                                                       |
 | `show_current`           | `boolean`         | `true`       | Show current weather conditions.                                                                                                                                                  |
@@ -93,7 +94,7 @@ resources:
 By default the card shows the weather entity's own name. Set `name` to a string to override it:
 
 ```yaml
-type: custom:weather-forecast-card
+type: custom:weather-forecast-card-details
 entity: weather.home
 name: Outside
 ```
@@ -101,7 +102,7 @@ name: Outside
 On Home Assistant 2026.4 and later, `name` can also be a list of parts, which the card resolves against the entity's device, area and floor. This is the same naming Home Assistant's built-in cards use, so a renamed device or area is picked up automatically:
 
 ```yaml
-type: custom:weather-forecast-card
+type: custom:weather-forecast-card-details
 entity: weather.home
 name:
   - type: area
@@ -284,7 +285,7 @@ The attribute selector can be accessed via:
 **Example configuration with settings icon:**
 
 ```yaml
-type: custom:weather-forecast-card
+type: custom:weather-forecast-card-details
 entity: weather.home
 forecast:
   mode: chart
@@ -294,7 +295,7 @@ forecast:
 ## Example
 
 ```yaml
-type: custom:weather-forecast-card
+type: custom:weather-forecast-card-details
 entity: weather.home
 current:
   show_attributes:
@@ -324,7 +325,7 @@ Enable weather effects using the `show_condition_effects` option:
 **Enable all effects:**
 
 ```yaml
-type: custom:weather-forecast-card
+type: custom:weather-forecast-card-details
 entity: weather.home
 show_condition_effects: true
 ```
@@ -332,7 +333,7 @@ show_condition_effects: true
 **Enable specific effects only:**
 
 ```yaml
-type: custom:weather-forecast-card
+type: custom:weather-forecast-card-details
 entity: weather.home
 show_condition_effects:
   - rain
@@ -343,7 +344,7 @@ show_condition_effects:
 **Disable all effects (default):**
 
 ```yaml
-type: custom:weather-forecast-card
+type: custom:weather-forecast-card-details
 entity: weather.home
 show_condition_effects: false
 ```
@@ -401,7 +402,7 @@ Icons should be named after the weather condition states used by Home Assistant.
 Example configuration with custom icons:
 
 ```yaml
-type: custom:weather-forecast-card
+type: custom:weather-forecast-card-details
 entity: weather.home
 icons_path: /local/img/weather-icons
 ```
@@ -542,7 +543,7 @@ my-custom-theme:
 Configure font size for all elements:
 
 ```yaml
-type: custom:weather-forecast-card
+type: custom:weather-forecast-card-details
 entity: weather.home
 card_mod:
   style: |
@@ -560,7 +561,7 @@ card_mod:
 Or if you want more granular control:
 
 ```yaml
-type: custom:weather-forecast-card
+type: custom:weather-forecast-card-details
 entity: weather.home
 card_mod:
   style: |

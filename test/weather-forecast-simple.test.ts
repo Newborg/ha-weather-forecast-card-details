@@ -21,7 +21,7 @@ describe("weather-forecast-card simple", () => {
   const hass = mockHassInstance.getHass() as ExtendedHomeAssistant;
 
   const testConfig: WeatherForecastCardConfig = {
-    type: "custom:weather-forecast-card",
+    type: "custom:weather-forecast-card-details",
     entity: "weather.demo",
     forecast: {
       mode: ForecastMode.Simple,
@@ -33,10 +33,10 @@ describe("weather-forecast-card simple", () => {
 
   beforeEach(async () => {
     card = await fixture<WeatherForecastCard>(
-      html`<weather-forecast-card
+      html`<weather-forecast-card-details
         .hass=${hass}
         .config=${testConfig}
-      ></weather-forecast-card>`
+      ></weather-forecast-card-details>`
     );
 
     expect(card).not.toBeNull();

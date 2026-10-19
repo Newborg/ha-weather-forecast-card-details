@@ -13,7 +13,7 @@ import { NumberFormat } from "custom-card-helpers";
 import "../src/components/wfc-current-weather";
 
 const baseConfig = {
-  type: "custom:weather-forecast-card",
+  type: "custom:weather-forecast-card-details",
   entity: "weather.demo",
 };
 

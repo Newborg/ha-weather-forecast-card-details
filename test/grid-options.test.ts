@@ -8,11 +8,11 @@ function createCard(
   config: Partial<WeatherForecastCardConfig> = {}
 ): WeatherForecastCard {
   const card = document.createElement(
-    "weather-forecast-card"
+    "weather-forecast-card-details"
   ) as WeatherForecastCard;
 
   card.setConfig({
-    type: "custom:weather-forecast-card",
+    type: "custom:weather-forecast-card-details",
     entity: "weather.demo",
     ...config,
   } as WeatherForecastCardConfig);
