@@ -430,6 +430,25 @@ export const formatPrecipitation = (value: number, unit: string): string => {
   return `${formatted} ${unit}`;
 };
 
+/**
+ * Formats a precipitation probability for display.
+ *
+ * Returns an empty string when there is no probability (or it rounds to 0%),
+ * and `<10%` for small non-zero probabilities, matching the extra attribute.
+ */
+export const formatPrecipitationProbability = (value?: number): string => {
+  if (value == null) {
+    return "";
+  }
+
+  const rounded = Math.round(value);
+  if (rounded <= 0) {
+    return "";
+  }
+
+  return rounded < 10 ? "<10%" : `${rounded}%`;
+};
+
 export const getMaxPrecipitationForUnit = memoizeOne(
   (unit: string, forecastType: ForecastType): number => {
     const maxPrecipitationMm = forecastType === "hourly" ? 8 : 20;
@@ -627,7 +646,9 @@ export const formatWeatherEntityAttributeValue = (
   attribute: CurrentWeatherAttributes | string
 ): string | undefined => {
   const value =
-    weatherEntity.attributes[attribute as keyof typeof weatherEntity.attributes];
+    weatherEntity.attributes[
+      attribute as keyof typeof weatherEntity.attributes
+    ];
 
   if (value === undefined) {
     return undefined;

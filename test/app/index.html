@@ -47,6 +47,10 @@
   <body>
     <div class="view">
       <h2>Weather Forecast Card test</h2>
+      <h3>Chart with precipitation probability</h3>
+      <div class="test-card">
+        <weather-forecast-card-details id="test-card-precip-probability"></weather-forecast-card-details>
+      </div>
       <h3>With current weather</h3>
       <div class="test-card">
         <weather-forecast-card-details id="test-card-1"></weather-forecast-card-details>
@@ -194,6 +198,19 @@
       customElements.whenDefined("weather-forecast-card-details").then(() => {
         const mockHass = new MockHass();
         const hass = mockHass.getHass();
+
+        initializeCard(
+          "test-card-precip-probability",
+          {
+            entity: "weather.demo",
+            forecast: {
+              mode: "chart",
+              extra_attribute: "wind_bearing",
+              show_precipitation_probability: true,
+            },
+          },
+          hass
+        );
 
         initializeCard("test-card-1", { entity: "weather.demo" }, hass);
 

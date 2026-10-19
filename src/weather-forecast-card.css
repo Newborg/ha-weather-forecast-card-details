@@ -44,6 +44,10 @@
     --weather-forecast-card-chart-precipitation-label-color,
     var(--wfc-chart-label-color)
   );
+  --wfc-chart-precipitation-probability-label-color: var(
+    --weather-forecast-card-chart-precipitation-probability-label-color,
+    var(--blue-color, #2196f3)
+  );
   /* Fallbacks for iOS 15 / Safari 15 (no color-mix support) */
   --wfc-chart-grid-color: var(
     --weather-forecast-card-chart-grid-color,

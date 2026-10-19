@@ -14,7 +14,9 @@
 A custom weather card for Home Assistant that displays current weather and forecast in a scrollable horizontal list or chart.
 
 > [!IMPORTANT]
-> This is a personal fork of [troinine/ha-weather-forecast-card](https://github.com/troinine/ha-weather-forecast-card). It is installed as `custom:weather-forecast-card-details`.
+> This is a personal fork of [troinine/ha-weather-forecast-card](https://github.com/troinine/ha-weather-forecast-card). It is installed as `custom:weather-forecast-card-details` and adds:
+>
+> - `forecast.show_precipitation_probability` – shows the precipitation probability below the precipitation amount in chart mode.
 >
 > The fork shares internal element names with the original card, so do not load both cards at the same time.
 
@@ -238,6 +240,7 @@ current:
 | `use_color_thresholds`    | boolean | `true`                          | Replaces solid temperature lines with a gradient based on actual values when using forecast chart mode. Colors transition at fixed intervals: -10° (Cold), 0° (Freezing), 8° (Chilly), 18° (Mild), 26° (Warm), and 34° (Hot). These thresholds are specified in degrees Celsius (°C). |
 | `show_attribute_selector` | boolean | `false`                         | Displays a settings icon in the top-right corner of the chart for quick access to the attribute selector. The attribute selector is also accessible via hold action by default. See [Chart Attribute Selector](#chart-attribute-selector).                                            |
 | `default_chart_attribute` | string  | `temperature_and_precipitation` | The weather attribute to display by default in chart mode. See [Chart Attribute Selector](#chart-attribute-selector) for available values.                                                                                                                                            |
+| `show_precipitation_probability` | boolean | `false`                  | Shows the precipitation probability below the precipitation amount when using forecast chart mode with the `temperature_and_precipitation` attribute. Probabilities below 10% are shown as `<10%`, and 0% is hidden. Requires a weather entity that provides `precipitation_probability`. |
 
 > [!IMPORTANT]
 > **Canvas width limit:** To ensure cross-browser compatibility and prevent rendering issues, the canvas width is capped at 16384 pixels in `chart` mode. At a standard item width of 50px, this supports approximately 320 entries (roughly two weeks of data) which is more than enough to cover reliable weather data from most forecast services. Any data exceeding this limit will be truncated.
@@ -443,6 +446,7 @@ Add these variables to your Home Assistant theme to customize the card's appeara
 | `weather-forecast-card-chart-temp-high-label-color`     | `var(--chart-label-color)`             | Chart label color for high temperature                                                                                     |
 | `weather-forecast-card-chart-temp-low-label-color`      | `var(--secondary-text-color, #9b9b9b)` | Chart label color for low temperature                                                                                      |
 | `weather-forecast-card-chart-precipitation-label-color` | `var(--chart-label-color)`             | Chart label color for precipitation                                                                                        |
+| `weather-forecast-card-chart-precipitation-probability-label-color` | `var(--blue-color)`        | Chart label color for precipitation probability                                                                            |
 | `weather-forecast-card-chart-grid-color`                | Color mix 15% opaque text              | Chart grid line color                                                                                                      |
 | `weather-forecast-card-precipitation-bar-color`         | Color mix 40% blue                     | Precipitation bar color                                                                                                    |
 | `weather-forecast-card-sunrise-color`                   | `var(--orange-color, #ff9800)`         | Sunrise time indicator color                                                                                               |

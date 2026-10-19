@@ -4,7 +4,7 @@ import { DragScrollController } from "../controllers/drag-scroll-controller";
 import { formatDay } from "../helpers";
 import { styleMap } from "lit/directives/style-map.js";
 import { classMap } from "lit/directives/class-map.js";
-import ChartDataLabels from "chartjs-plugin-datalabels";
+import ChartDataLabels, { Context } from "chartjs-plugin-datalabels";
 import { getRelativePosition } from "chart.js/helpers";
 import { actionHandler } from "../hass";
 import { logger } from "../logger";
@@ -22,6 +22,7 @@ import {
   ForecastAttribute,
   ForecastType,
   formatPrecipitation,
+  formatPrecipitationProbability,
   formatTemperature,
   getMaxPrecipitationForUnit,
   getWeatherUnit,
@@ -94,6 +95,10 @@ const CHART_LABEL_VERTICAL_PADDING = 10;
 
 // Default chart height in pixels at the baseline font size, used as a reference for scaling the chart height dynamically.
 const DEFAULT_CHART_HEIGHT = 130;
+
+// Extra pixels (on top of the font size) between the precipitation amount label and the
+// precipitation probability label shown below it.
+const PRECIPITATION_PROBABILITY_LINE_SPACING = 2;
 
 /**
  * A chart component to display weather forecast data.
@@ -176,9 +181,12 @@ export class WfcForecastChart extends LitElement {
     const gaps = Math.max(count - 1, 0);
     const fontSize = this._getChartFontSize();
 
-    // Adjust chart height based on font size (base: 130px at default font size)
+    // Adjust chart height based on font size (base: 130px at default font size), and
+    // make room for the precipitation probability line below the precipitation amount.
     const chartHeight =
-      DEFAULT_CHART_HEIGHT + Math.max(0, fontSize - DEFAULT_CHART_FONT_SIZE);
+      DEFAULT_CHART_HEIGHT +
+      Math.max(0, fontSize - DEFAULT_CHART_FONT_SIZE) +
+      this._getPrecipitationProbabilityLineHeight();
 
     const totalWidthCalc = `calc(${count} * var(--forecast-item-width) + ${gaps} * var(--forecast-item-gap))`;
 
@@ -358,6 +366,22 @@ export class WfcForecastChart extends LitElement {
     return -22 - (fontSize - DEFAULT_CHART_FONT_SIZE);
   }
 
+  private _showPrecipitationProbability(): boolean {
+    return (
+      !!this.config?.forecast?.show_precipitation_probability &&
+      this._selectedAttribute === "temperature_and_precipitation"
+    );
+  }
+
+  /**
+   * Height in pixels reserved for the precipitation probability line, or 0 when hidden.
+   */
+  private _getPrecipitationProbabilityLineHeight(): number {
+    return this._showPrecipitationProbability()
+      ? this._getChartFontSize() + PRECIPITATION_PROBABILITY_LINE_SPACING
+      : 0;
+  }
+
   private getChartConfig(): ChartConfiguration {
     const data = this.safeForecast;
     const style = getComputedStyle(this);
@@ -371,7 +395,9 @@ export class WfcForecastChart extends LitElement {
     // bars clear of the edge.
     const topPadding = fontSize + CHART_LABEL_VERTICAL_PADDING;
     const bottomPadding =
-      DEFAULT_CHART_PADDING + (fontSize - DEFAULT_CHART_FONT_SIZE);
+      DEFAULT_CHART_PADDING +
+      (fontSize - DEFAULT_CHART_FONT_SIZE) +
+      this._getPrecipitationProbabilityLineHeight();
 
     const baseOptions: ChartOptions = {
       responsive: true,
@@ -446,6 +472,15 @@ export class WfcForecastChart extends LitElement {
       "--wfc-chart-precipitation-label-color"
     );
     const precipColor = style.getPropertyValue("--wfc-precipitation-bar-color");
+    const precipProbabilityLabelColor = style.getPropertyValue(
+      "--wfc-chart-precipitation-probability-label-color"
+    );
+    const showPrecipProbability = this._showPrecipitationProbability();
+    const precipUnit = getWeatherUnit(
+      this.hass,
+      this.weatherEntity,
+      "precipitation"
+    );
 
     const maxPrecip = getMaxPrecipitationForUnit(
       getWeatherUnit(this.hass, this.weatherEntity, "precipitation"),
@@ -490,8 +525,15 @@ export class WfcForecastChart extends LitElement {
           },
           {
             type: "bar",
+            // A dry slot with a precipitation probability still needs a (zero height)
+            // data point, otherwise its probability label is not rendered.
             data: data.map((f) =>
-              f.precipitation && f.precipitation !== 0 ? f.precipitation : null
+              f.precipitation && f.precipitation !== 0
+                ? f.precipitation
+                : showPrecipProbability &&
+                    formatPrecipitationProbability(f.precipitation_probability)
+                  ? 0
+                  : null
             ),
             backgroundColor: precipColor,
             yAxisID: "yPrecip",
@@ -509,10 +551,23 @@ export class WfcForecastChart extends LitElement {
               offset: this._getBarLabelOffset(),
               color: precipLabelColor,
               formatter: (value: number) =>
-                formatPrecipitation(
-                  value,
-                  getWeatherUnit(this.hass, this.weatherEntity, "precipitation")
-                ),
+                formatPrecipitation(value, precipUnit),
+              // The amount label uses the options above, the probability label goes below it.
+              ...(showPrecipProbability && {
+                labels: {
+                  amount: {},
+                  probability: {
+                    offset:
+                      this._getBarLabelOffset() -
+                      this._getPrecipitationProbabilityLineHeight(),
+                    color: precipProbabilityLabelColor,
+                    formatter: (_value: number, context: Context) =>
+                      formatPrecipitationProbability(
+                        data[context.dataIndex]?.precipitation_probability
+                      ),
+                  },
+                },
+              }),
             },
           },
         ],
