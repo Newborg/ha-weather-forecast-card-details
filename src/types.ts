@@ -50,6 +50,9 @@ export const WEATHER_EFFECTS = [
 export type CurrentWeatherAttributes =
   (typeof CURRENT_WEATHER_ATTRIBUTES)[number];
 
+/** Secondary info value that shows today's sunrise and sunset times. */
+export const SECONDARY_INFO_SUN_TIMES = "sun_times";
+
 export const CHART_ATTRIBUTES = [
   "temperature_and_precipitation",
   "apparent_temperature",
@@ -119,7 +122,10 @@ export interface WeatherForecastCardCurrentConfig {
     | CurrentWeatherAttributeConfig
     | (CurrentWeatherAttributes | CurrentWeatherAttributeConfig)[];
   temperature_precision?: number;
-  secondary_info_attribute?: CurrentWeatherAttributes | CurrentWeatherAttributeConfig;
+  secondary_info_attribute?:
+    | CurrentWeatherAttributes
+    | typeof SECONDARY_INFO_SUN_TIMES
+    | CurrentWeatherAttributeConfig;
   temperature_entity?: string;
   attributes_layout?: CurrentWeatherAttributesLayout;
 }

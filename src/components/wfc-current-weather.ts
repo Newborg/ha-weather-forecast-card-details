@@ -2,7 +2,7 @@ import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { actionHandler } from "../hass";
 import { computeEntityName } from "../entity-name";
-import { getSuntimesInfo, normalizeDate } from "../helpers";
+import { formatTimeParts, getSuntimesInfo, normalizeDate } from "../helpers";
 import {
   ActionConfig,
   ActionHandlerEvent,
@@ -15,6 +15,7 @@ import {
   CurrentWeatherAttributes,
   CurrentWeatherAttributeConfig,
   ExtendedHomeAssistant,
+  SECONDARY_INFO_SUN_TIMES,
   WeatherForecastCardConfig,
 } from "../types";
 import {
@@ -36,10 +37,16 @@ export type NormalizedAttributeConfig = {
   icon?: string;
 };
 
+type SunTimes = {
+  sunrise: string;
+  sunset: string;
+};
+
 type SecondaryInfo = {
   icon?: string;
   stateObj?: HassEntity;
   value?: string;
+  sunTimes?: SunTimes;
 };
 
 type TemperatureExtrema = {
@@ -126,6 +133,9 @@ export class WfcCurrentWeather extends LitElement {
             ${secondaryInfo
               ? html`
                   <div class="wfc-current-secondary-info">
+                    ${secondaryInfo.sunTimes
+                      ? this.renderSunTimes(secondaryInfo.sunTimes)
+                      : nothing}
                     ${secondaryInfo.stateObj
                       ? html`
                           <ha-state-icon
@@ -144,9 +154,12 @@ export class WfcCurrentWeather extends LitElement {
                             ></ha-attribute-icon>
                           `
                         : nothing}
-                    <span class="wfc-current-secondary-value wfc-secondary"
-                      >${secondaryInfo.value}</span
-                    >
+                    ${secondaryInfo.value != null
+                      ? html`<span
+                          class="wfc-current-secondary-value wfc-secondary"
+                          >${secondaryInfo.value}</span
+                        >`
+                      : nothing}
                   </div>
                 `
               : nothing}
@@ -162,6 +175,52 @@ export class WfcCurrentWeather extends LitElement {
           : nothing}
       </div>
     `;
+  }
+
+  private renderSunTimes(sunTimes: SunTimes): TemplateResult {
+    return html`
+      <ha-attribute-icon
+        class="wfc-current-secondary-icon wfc-secondary"
+        .hass=${this.hass}
+        .icon=${"mdi:weather-sunset-up"}
+      ></ha-attribute-icon>
+      <span class="wfc-current-secondary-value wfc-secondary"
+        >${sunTimes.sunrise}</span
+      >
+      <ha-attribute-icon
+        class="wfc-current-secondary-icon wfc-current-secondary-sunset-icon wfc-secondary"
+        .hass=${this.hass}
+        .icon=${"mdi:weather-sunset-down"}
+      ></ha-attribute-icon>
+      <span class="wfc-current-secondary-value wfc-secondary"
+        >${sunTimes.sunset}</span
+      >
+    `;
+  }
+
+  /**
+   * Today's sunrise and sunset times, or null when the location is unknown or
+   * the sun does not rise or set today (polar day or night).
+   */
+  private getSunTimes(): SunTimes | null {
+    const suntimesInfo = getSuntimesInfo(this.hass, new Date());
+    if (
+      !suntimesInfo ||
+      isNaN(suntimesInfo.sunrise.getTime()) ||
+      isNaN(suntimesInfo.sunset.getTime())
+    ) {
+      return null;
+    }
+
+    const formatTime = (date: Date): string => {
+      const { time, suffix } = formatTimeParts(this.hass, date);
+      return suffix ? `${time} ${suffix}` : time;
+    };
+
+    return {
+      sunrise: formatTime(suntimesInfo.sunrise),
+      sunset: formatTime(suntimesInfo.sunset),
+    };
   }
 
   private isNightTime(): boolean {
@@ -260,14 +319,23 @@ export class WfcCurrentWeather extends LitElement {
     const rawSecondaryInfoAttribute =
       this.config.current?.secondary_info_attribute;
 
-    if (rawSecondaryInfoAttribute) {
+    if (rawSecondaryInfoAttribute === SECONDARY_INFO_SUN_TIMES) {
+      const sunTimes = this.getSunTimes();
+      if (sunTimes) {
+        return { sunTimes };
+      }
+    } else if (rawSecondaryInfoAttribute) {
       // Normalize to object form
       const secondaryAttr =
         typeof rawSecondaryInfoAttribute === "string"
           ? { name: rawSecondaryInfoAttribute as CurrentWeatherAttributes }
           : rawSecondaryInfoAttribute;
 
-      const { name, entity: customEntityId, icon: explicitIcon } = secondaryAttr;
+      const {
+        name,
+        entity: customEntityId,
+        icon: explicitIcon,
+      } = secondaryAttr;
 
       if (customEntityId) {
         // Custom entity path: skip the in-attributes check

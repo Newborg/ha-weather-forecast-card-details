@@ -12,6 +12,8 @@ import {
   mdiWaterThermometerOutline,
   mdiWaterPercent,
   mdiCloudOutline,
+  mdiWeatherSunsetUp,
+  mdiWeatherSunsetDown,
 } from "@mdi/js";
 
 /**
@@ -40,6 +42,8 @@ export class HaAttributeIcon extends LitElement {
     "mdi:water-thermometer-outline": mdiWaterThermometerOutline,
     "mdi:thermometer": mdiWaterThermometerOutline,
     "mdi:cloud-outline": mdiCloudOutline,
+    "mdi:weather-sunset-up": mdiWeatherSunsetUp,
+    "mdi:weather-sunset-down": mdiWeatherSunsetDown,
   };
 
   protected createRenderRoot() {

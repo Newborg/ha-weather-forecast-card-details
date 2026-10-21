@@ -18,6 +18,7 @@ import {
   CurrentWeatherAttributeConfig,
   ExtendedHomeAssistant,
   MAX_TEMPERATURE_PRECISION,
+  SECONDARY_INFO_SUN_TIMES,
   WEATHER_EFFECTS,
   WeatherForecastCardConfig,
   WeatherForecastCardCurrentConfig,
@@ -274,12 +275,18 @@ export class WeatherForecastCardEditor
         optional: true,
         selector: {
           select: {
-            options: CURRENT_WEATHER_ATTRIBUTES.map((attribute) => ({
-              value: attribute,
-              label:
-                localize(`ui.card.weather.attributes.${attribute}`) ||
-                capitalize(attribute).replace(/_/g, " "),
-            })),
+            options: [
+              ...CURRENT_WEATHER_ATTRIBUTES.map((attribute) => ({
+                value: attribute,
+                label:
+                  localize(`ui.card.weather.attributes.${attribute}`) ||
+                  capitalize(attribute).replace(/_/g, " "),
+              })),
+              {
+                value: SECONDARY_INFO_SUN_TIMES,
+                label: "Sunrise and sunset",
+              },
+            ],
           },
         },
       },
@@ -913,7 +920,7 @@ export class WeatherForecastCardEditor
       case "current.show_attributes":
         return "Select which weather attributes to display in the current weather section.";
       case "current.secondary_info_attribute":
-        return "Select a weather attribute to display as secondary information in the current weather section.";
+        return "Select a weather attribute, or sunrise and sunset times, to display as secondary information in the current weather section.";
       case "forecast.extra_attribute":
         return "Select an extra attribute to display below each forecast.";
       case "forecast_interactions":

@@ -239,6 +239,10 @@ ha-card {
   padding-left: 4px;
 }
 
+.wfc-current-secondary-sunset-icon {
+  margin-left: var(--ha-space-2, 8px);
+}
+
 .wfc-current-secondary-icon svg {
   width: 100% !important;
   height: 100% !important;
