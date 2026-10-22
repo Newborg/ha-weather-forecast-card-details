@@ -341,7 +341,8 @@ describe("chart hourly precipitation", () => {
 
     expect(hourly?.type).toBe("bar");
     expect(hourly?.xAxisID).toBe("xTime");
-    expect(chart.options.scales?.xTime).toBeDefined();
+    // Bars must not pad the time axis, or the temperature line is squeezed.
+    expect(chart.options.scales?.xTime?.offset).toBe(false);
   });
 
   it("adds a filled area on the time axis", async () => {
@@ -357,6 +358,30 @@ describe("chart hourly precipitation", () => {
     // The area starts and ends at zero.
     expect(hourly.data[0]!.y).toBe(0);
     expect(hourly.data[hourly.data.length - 1]!.y).toBe(0);
+  });
+
+  it("draws no area outline between dry intervals", async () => {
+    const chart = await createChart({ hourly_precipitation: "area" });
+    const hourly = findHourlyDataset(chart) as unknown as {
+      data: { y: number }[];
+      segment: {
+        borderColor: (context: {
+          p0DataIndex: number;
+          p1DataIndex: number;
+        }) => string | undefined;
+      };
+    };
+    const outline = (p0DataIndex: number) =>
+      hourly.segment.borderColor({ p0DataIndex, p1DataIndex: p0DataIndex + 1 });
+
+    // From the zero start point to the first rainy interval: outlined.
+    expect(outline(0)).toBeUndefined();
+
+    hourly.data[1]!.y = 0;
+    hourly.data[2]!.y = 0;
+
+    // Between two dry intervals: no outline.
+    expect(outline(1)).toBe("transparent");
   });
 
   it("hides the daily bars of days drawn hourly but keeps the others", async () => {

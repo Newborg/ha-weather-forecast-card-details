@@ -49,6 +49,7 @@ import {
   BarElement,
   ChartConfiguration,
   ScriptableContext,
+  ScriptableLineSegmentContext,
   Color,
   ChartDataset,
   ChartOptions,
@@ -675,7 +676,10 @@ export class WfcForecastChart extends LitElement {
           display: false,
           min: -0.5,
           max: slotCount - 0.5,
-          grid: { display: false },
+          // Chart.js pads an axis with bars on it by default, which would squeeze the time
+          // axis and misplace everything on it.
+          offset: false,
+          grid: { display: false, offset: false },
           ticks: { display: false },
         },
       },
@@ -727,21 +731,30 @@ export class WfcForecastChart extends LitElement {
     const halfInterval = PRECIPITATION_INTERVAL_HOURS / 24 / 2;
     const first = values[0]!;
     const last = values[values.length - 1]!;
+    // Start and end at zero so the area closes at the edges of the hourly data.
+    const areaValues = [
+      { x: first.x - halfInterval, y: 0 },
+      ...values,
+      { x: last.x + halfInterval, y: 0 },
+    ];
 
     const dataset: ChartDataset<"bar" | "line"> =
       precipitationStyle === "area"
         ? {
             type: "line",
-            // Start and end at zero so the area closes at the edges of the hourly data.
-            data: [
-              { x: first.x - halfInterval, y: 0 },
-              ...values,
-              { x: last.x + halfInterval, y: 0 },
-            ],
+            data: areaValues,
             fill: "origin",
             backgroundColor: precipColor,
             borderColor: areaLineColor,
             borderWidth: 1.5,
+            // No outline along the bottom where it is dry, which would look like a little rain.
+            segment: {
+              borderColor: (context: ScriptableLineSegmentContext) =>
+                areaValues[context.p0DataIndex]?.y === 0 &&
+                areaValues[context.p1DataIndex]?.y === 0
+                  ? "transparent"
+                  : undefined,
+            },
             pointRadius: 0,
             pointHoverRadius: 0,
             cubicInterpolationMode: "monotone",
