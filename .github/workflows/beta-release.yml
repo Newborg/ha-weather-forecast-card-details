@@ -1,0 +1,70 @@
+name: Beta release
+
+# Publishes a pre-release for testing, built from the branch the workflow is run on.
+# Unlike the release workflow, it does not commit or bump the version in package.json.
+# HACS offers pre-releases when the repository's pre-release switch entity is turned on.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: beta-release
+  cancel-in-progress: false
+
+jobs:
+  beta-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          run_install: false
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare beta version
+        id: version
+        run: |
+          node -e '
+            const fs = require("fs");
+            const pkg = require("./package.json");
+
+            // 1.5.0-devel becomes 1.5.0-beta.<run number>, which sorts before 1.5.0.
+            const base = pkg.version.replace(/-devel$/, "");
+            const version = `${base}-beta.${process.env.GITHUB_RUN_NUMBER}`;
+
+            // Only for the build, so the card logs the beta version. Not committed.
+            pkg.version = version;
+            fs.writeFileSync("./package.json", JSON.stringify(pkg, null, 2) + "\n");
+
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `VERSION=v${version}\n`);
+            console.log(`Beta version: v${version}`);
+          '
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Create pre-release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          name: ${{ steps.version.outputs.VERSION }}
+          target_commitish: ${{ github.sha }}
+          files: dist/weather-forecast-card-details.js
+          prerelease: true
+          body: Beta build of `${{ github.ref_name }}` at ${{ github.sha }}, for testing.
