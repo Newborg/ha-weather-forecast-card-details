@@ -179,6 +179,23 @@ describe("chart continuous temperature line", () => {
     // Not grouped with the time axis, so the bars stay centered in their slots.
     expect((precipitation as { grouped?: boolean }).grouped).toBe(false);
 
+    // Only the labelled high and low points get a dot.
+    const lineOptions = line as unknown as {
+      pointRadius: (context: { dataIndex: number }) => number;
+      datalabels: {
+        formatter: (value: unknown, context: { dataIndex: number }) => unknown;
+      };
+    };
+    const hasDot = line!.data.map(
+      (_, dataIndex) => lineOptions.pointRadius({ dataIndex }) > 0
+    );
+    const hasLabel = line!.data.map(
+      (_, dataIndex) =>
+        lineOptions.datalabels.formatter(null, { dataIndex }) !== null
+    );
+    expect(hasDot).toEqual(hasLabel);
+    expect(hasDot).toContain(false);
+
     const xTime = chart.options.scales?.xTime;
     expect(xTime?.min).toBe(-0.5);
     expect(xTime?.max).toBe(chart.data.labels!.length - 0.5);

@@ -253,9 +253,9 @@ current:
 
 With `continuous_temperature_line: true`, the daily chart replaces the high and low lines with one line that follows the temperature through each day, using the hourly forecast:
 
-- The line has a point every 3 hours, plus each day's warmest and coldest hour. Points are placed by time of day within each day.
-- Each day is labelled with its highest temperature above the line and its lowest below it.
-- Where the hourly forecast ends (Met.no provides 48 hours), the line continues through each day's high and low from the daily forecast. These are placed at 05:00 (low) and 14:00 (high) and drawn as hollow points, because the actual times are not known.
+- The line runs through a point every 3 hours, plus each day's warmest and coldest hour. Points are placed by time of day within each day.
+- Each day's highest temperature is marked with a dot and a label above the line, and its lowest with a dot and a label below it.
+- Where the hourly forecast ends (Met.no provides 48 hours), the line continues through each day's high and low from the daily forecast. These are placed at 05:00 (low) and 14:00 (high), and their dots are hollow because the actual times are not known.
 - The hourly view is unchanged.
 
 To get real hourly data for the whole week, set `temperature_line_entity` to a weather entity with a longer hourly forecast, such as the Open-Meteo integration (7 days). The rest of the card keeps using `entity`.

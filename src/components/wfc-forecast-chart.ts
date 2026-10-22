@@ -652,8 +652,8 @@ export class WfcForecastChart extends LitElement {
   /**
    * Replaces the high and low temperature lines with one continuous line through the
    * given points. The points are placed by time on a hidden linear axis aligned with the
-   * daily slots. Points at an assumed time of day are drawn hollow, and only each day's
-   * high and low point gets a label.
+   * daily slots. Only each day's high and low point gets a dot and a label, and the dot
+   * is hollow when the point is at an assumed time of day.
    */
   private _withTemperatureLine(
     config: ChartConfiguration,
@@ -681,6 +681,9 @@ export class WfcForecastChart extends LitElement {
       !!points[context.dataIndex]?.assumed;
     const isLow = (context: { dataIndex: number }) =>
       points[context.dataIndex]?.label === "low";
+    // Only the labelled high and low points get a dot, the others only shape the line.
+    const pointRadius = (context: ScriptableContext<"line">) =>
+      points[context.dataIndex]?.label ? (isAssumed(context) ? 3.5 : 3) : 0;
 
     const lineDataset: ChartDataset<"line"> = {
       type: "line",
@@ -690,8 +693,8 @@ export class WfcForecastChart extends LitElement {
       ...lineStyle,
       pointBackgroundColor: (context: ScriptableContext<"line">) =>
         isAssumed(context) ? assumedPointColor : lineColor(context),
-      pointRadius: (context: ScriptableContext<"line">) =>
-        isAssumed(context) ? 3.5 : 3,
+      pointRadius,
+      pointHoverRadius: pointRadius,
       pointBorderWidth: (context: ScriptableContext<"line">) =>
         isAssumed(context) ? 2 : 1,
       datalabels: {
