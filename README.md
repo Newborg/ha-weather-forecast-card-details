@@ -1,37 +1,42 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/troinine/ha-weather-forecast-card/refs/heads/main/docs/weather-forecast-card-demo.gif" alt="Weather Forecast Card" width="600" style="border-radius: 12px;">
+  <img src="https://raw.githubusercontent.com/Newborg/ha-weather-forecast-card-details/refs/heads/main/docs/weather-forecast-card-demo.gif" alt="Weather Forecast Card" width="600" style="border-radius: 12px;">
   <br>
   <a href=https://www.home-assistant.io/><img alt="Home Assistant" src="https://img.shields.io/badge/Home%20Assistant-Start-blue?logo=homeassistant&logoColor=fff&style=for-the-badge&labelColor=000"></a>
-  <a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=troinine&repository=ha-weather-forecast-card&category=Dashboard"><img alt="HACS" src="https://img.shields.io/badge/HACS-default-blue?logo=homeassistantcommunitystore&logoColor=fff&style=for-the-badge&labelColor=000"></a>
-  <a href="https://github.com/troinine/ha-weather-forecast-card/releases"><img alt="Releases" src="https://img.shields.io/github/v/release/troinine/ha-weather-forecast-card?style=for-the-badge&labelColor=000&logoColor=fff&color=blue"></a>
-  <a href="https://github.com/troinine/ha-weather-forecast-card/actions/workflows/build.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/troinine/ha-weather-forecast-card/build.yml?branch=main&style=for-the-badge&logo=github&label=Tests&labelColor=000&logoColor=fff&color=blue"></a>
-  <a href="https://github.com/troinine/ha-weather-forecast-card/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/troinine/ha-weather-forecast-card/total?style=for-the-badge&labelColor=000&logoColor=fff&color=blue"></a>
+  <a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=Newborg&repository=ha-weather-forecast-card-details&category=Dashboard"><img alt="HACS" src="https://img.shields.io/badge/HACS-custom-blue?logo=homeassistantcommunitystore&logoColor=fff&style=for-the-badge&labelColor=000"></a>
+  <a href="https://github.com/Newborg/ha-weather-forecast-card-details/releases"><img alt="Releases" src="https://img.shields.io/github/v/release/Newborg/ha-weather-forecast-card-details?style=for-the-badge&labelColor=000&logoColor=fff&color=blue"></a>
+  <a href="https://github.com/Newborg/ha-weather-forecast-card-details/actions/workflows/build.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/Newborg/ha-weather-forecast-card-details/build.yml?branch=main&style=for-the-badge&logo=github&label=Tests&labelColor=000&logoColor=fff&color=blue"></a>
+  <a href="https://github.com/Newborg/ha-weather-forecast-card-details/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/Newborg/ha-weather-forecast-card-details/total?style=for-the-badge&labelColor=000&logoColor=fff&color=blue"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge&labelColor=000"></a>
 </div>
 
 # Weather Forecast Card Details
 
-A custom weather card for Home Assistant that displays current weather and forecast in a scrollable horizontal list or chart.
+A custom weather card for Home Assistant that displays current weather and forecast in a scrollable horizontal list or chart, with extra temperature and precipitation details in the daily chart.
+
+## About this fork
+
+This card is a fork of [Weather Forecast Card](https://github.com/troinine/ha-weather-forecast-card) by troinine, released under the MIT license. It has all the features of the original card, and adds:
+
+- **Precipitation probability** – `forecast.show_precipitation_probability` shows the probability below the precipitation amount in chart mode.
+- **Sunrise and sunset** – `current.secondary_info_attribute: sun_times` shows today's sunrise and sunset times as the secondary info.
+- **Continuous temperature line** – `forecast.continuous_temperature_line` shows one temperature line through the day instead of separate high and low lines in the daily chart. See [Continuous temperature line](#continuous-temperature-line).
+- **Hourly precipitation** – `forecast.hourly_precipitation` shows precipitation per 3 hours as bars or a filled area in the daily chart. See [Hourly precipitation](#hourly-precipitation).
+- **Hourly chart entity** – `forecast.hourly_chart_entity` takes the hourly data for the daily chart from a separate weather entity, such as one with a 7-day hourly forecast. See [Hourly chart entity](#hourly-chart-entity).
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/Newborg/ha-weather-forecast-card-details/refs/heads/main/docs/weather-forecast-card-details.png" alt="Daily chart with a continuous temperature line, precipitation per 3 hours, precipitation probability, and sunrise and sunset times" width="500" style="border-radius: 12px;">
+</div>
+
+Changes from the original card are merged in from time to time. Please report problems with this fork in its own [issues](https://github.com/Newborg/ha-weather-forecast-card-details/issues), not in the original card's repository.
 
 > [!IMPORTANT]
-> This is a personal fork of [troinine/ha-weather-forecast-card](https://github.com/troinine/ha-weather-forecast-card). It is installed as `custom:weather-forecast-card-details` and adds:
->
-> - `forecast.show_precipitation_probability` – shows the precipitation probability below the precipitation amount in chart mode.
-> - `current.secondary_info_attribute: sun_times` – shows today's sunrise and sunset times as the secondary info.
-> - `forecast.continuous_temperature_line` – shows one continuous temperature line in the daily chart, see [Continuous temperature line](#continuous-temperature-line).
-> - `forecast.hourly_precipitation` – shows precipitation per 3 hours in the daily chart, see [Hourly precipitation](#hourly-precipitation).
-> - `forecast.hourly_chart_entity` – a separate weather entity for the hourly data in the daily chart, see [Hourly chart entity](#hourly-chart-entity).
->
-> The fork shares internal element names with the original card, so do not load both cards at the same time.
+> The card is installed as `custom:weather-forecast-card-details`. It shares internal element names with the original card, so do not load both cards at the same time.
 
-> [!NOTE]
-> This card is under active development and primarily built for my personal use cases but if you find it useful, feel free to use and share feedback!
+## Why the original card
 
-## Why this card
+The original card brings together the best aspects of popular weather cards, as no single existing card had all the features its author was looking for, plus extras like horizontal scrolling and tap‑to‑toggle between hourly and daily forecasts.
 
-While rebuilding my Home Assistant dashboard, I wanted a weather card with features from several existing custom cards as there wasn't a single card available that would satisfy my requirements. This led me to create this custom card, bringing together the best aspects of popular weather cards plus extras like horizontal scrolling and tap‑to‑toggle between hourly and daily forecasts.
-
-This card takes inspiration from [Weather Forecast Extended Card](https://github.com/Thyraz/weather-forecast-extended), [Weather Chart Card](https://github.com/mlamberts78/weather-chart-card), and the built-in [Home Assistant Weather Forecast Card](https://www.home-assistant.io/dashboards/weather-forecast/).
+It takes inspiration from [Weather Forecast Extended Card](https://github.com/Thyraz/weather-forecast-extended), [Weather Chart Card](https://github.com/mlamberts78/weather-chart-card), and the built-in [Home Assistant Weather Forecast Card](https://www.home-assistant.io/dashboards/weather-forecast/).
 
 **Key features:**
 
@@ -47,6 +52,8 @@ This card takes inspiration from [Weather Forecast Extended Card](https://github
 - **Condition effects** - Add a special touch with animated weather effects
 - **Card editor** - Configure the card directly in the UI. No YAML required
 
+See [About this fork](#about-this-fork) for the features added in this fork.
+
 ## Installation
 
 ### HACS (recommended)
@@ -59,6 +66,10 @@ This fork is installed in [HACS](https://hacs.xyz/) (Home Assistant Community St
 4. Search for "Weather Forecast Card Details" and click "Download"
 
 You can now add the card to your dashboard by clicking "Edit dashboard" from the top right corner. You may need to clear your browser cache.
+
+### Beta versions
+
+Test builds are published as pre-releases, named like `v1.6.0-beta.3`. To try one, open the card in HACS, download it again and pick the beta version. Pick the latest regular release the same way to go back.
 
 ### Manual Installation
 
@@ -357,7 +368,7 @@ The card supports animated visual effects that respond to current weather condit
 > **Performance Note:** Weather animations utilize CSS processing, which can increase CPU usage. On low-powered devices, or when displaying multiple cards simultaneously, this may cause UI sluggishness. If performance drops, consider disabling animations or selecting only the most essential effects.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/troinine/ha-weather-forecast-card/refs/heads/main/docs/weather-forecast-card-effects.gif" alt="Weather Forecast Card Effects" width="600" style="border-radius: 12px;">
+  <img src="https://raw.githubusercontent.com/Newborg/ha-weather-forecast-card-details/refs/heads/main/docs/weather-forecast-card-effects.gif" alt="Weather Forecast Card Effects" width="600" style="border-radius: 12px;">
 </div>
 
 ### Configuration
