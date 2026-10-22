@@ -1,6 +1,6 @@
 {
   "name": "weather-forecast-card-details",
-  "version": "1.5.0",
+  "version": "1.6.0-devel",
   "description": "Fork of troinine/ha-weather-forecast-card with extra precipitation details",
   "browserslist": "ios >= 15, safari >= 15, last 2 versions, not dead",
   "author": "troinine",
