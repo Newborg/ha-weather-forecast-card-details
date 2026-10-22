@@ -51,6 +51,10 @@
       <div class="test-card">
         <weather-forecast-card-details id="test-card-precip-probability"></weather-forecast-card-details>
       </div>
+      <h3>Continuous temperature line with 48 hours of hourly data</h3>
+      <div class="test-card">
+        <weather-forecast-card-details id="test-card-temperature-line-hybrid"></weather-forecast-card-details>
+      </div>
       <h3>With current weather</h3>
       <div class="test-card">
         <weather-forecast-card-details id="test-card-1"></weather-forecast-card-details>
@@ -210,9 +214,27 @@
               mode: "chart",
               extra_attribute: "wind_bearing",
               show_precipitation_probability: true,
+              continuous_temperature_line: true,
             },
           },
           hass
+        );
+
+        // Like Met.no: hourly data only for the next 48 hours.
+        const hassHourly48 = new MockHass();
+        hassHourly48.hourlyForecast = hassHourly48.hourlyForecast.slice(0, 48);
+        initializeCard(
+          "test-card-temperature-line-hybrid",
+          {
+            entity: "weather.demo",
+            show_current: false,
+            forecast: {
+              mode: "chart",
+              extra_attribute: "wind_bearing",
+              continuous_temperature_line: true,
+            },
+          },
+          hassHourly48.getHass()
         );
 
         initializeCard("test-card-1", { entity: "weather.demo" }, hass);

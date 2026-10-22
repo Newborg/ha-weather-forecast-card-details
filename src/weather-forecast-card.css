@@ -48,6 +48,10 @@
     --weather-forecast-card-chart-precipitation-probability-label-color,
     var(--blue-color, #2196f3)
   );
+  --wfc-chart-temperature-line-assumed-point-color: var(
+    --weather-forecast-card-chart-temperature-line-assumed-point-color,
+    var(--card-background-color, #fff)
+  );
   /* Fallbacks for iOS 15 / Safari 15 (no color-mix support) */
   --wfc-chart-grid-color: var(
     --weather-forecast-card-chart-grid-color,

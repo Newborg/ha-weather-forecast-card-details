@@ -31,6 +31,10 @@ import {
 } from "../data/weather";
 import { getUvIndexColor } from "../data/uv-index";
 import {
+  buildTemperatureLine,
+  TemperatureLinePoint,
+} from "../data/temperature-line";
+import {
   LineController,
   LineElement,
   PointElement,
@@ -116,6 +120,7 @@ export class WfcForecastChart extends LitElement {
   @property({ attribute: false }) forecast: ForecastAttribute[] = [];
   @property({ attribute: false }) config!: WeatherForecastCardConfig;
   @property({ attribute: false }) forecastType!: ForecastType;
+  @property({ attribute: false }) temperatureLineForecast?: ForecastAttribute[];
   @property({ attribute: false }) isTwiceDailyEntity = false;
   @property({ attribute: false }) itemWidth: number = 0;
   @property({ attribute: false }) isScrollable = false;
@@ -158,6 +163,7 @@ export class WfcForecastChart extends LitElement {
       changedProps.has("weatherEntity") ||
       changedProps.has("hass") ||
       changedProps.has("forecastType") ||
+      changedProps.has("temperatureLineForecast") ||
       changedProps.has("itemWidth");
 
     if (hasChanged && this.itemWidth > 0 && this.forecast?.length) {
@@ -461,7 +467,14 @@ export class WfcForecastChart extends LitElement {
     style: CSSStyleDeclaration,
     options: ChartOptions
   ): ChartConfiguration {
-    const { minTemp, maxTemp } = this.computeScaleLimits(data);
+    const temperatureLine = this._showContinuousTemperatureLine()
+      ? buildTemperatureLine(data, this.temperatureLineForecast)
+      : [];
+    const { minTemp, maxTemp } = this.computeScaleLimits(
+      temperatureLine.length
+        ? this._getTemperatureLineScaleData(temperatureLine)
+        : data
+    );
     const highTempLabelColor = style.getPropertyValue(
       "--wfc-chart-temp-high-label-color"
     );
@@ -490,7 +503,7 @@ export class WfcForecastChart extends LitElement {
     const tempLineStyle = this.getTemperatureLineStyle(style, "temperature");
     const templowLineStyle = this.getTemperatureLineStyle(style, "templow");
 
-    return {
+    const config: ChartConfiguration = {
       type: "line",
       data: {
         labels: data.map((f) => f.datetime),
@@ -605,6 +618,111 @@ export class WfcForecastChart extends LitElement {
         },
       }),
     };
+
+    return temperatureLine.length
+      ? this._withTemperatureLine(config, temperatureLine, data.length, style)
+      : config;
+  }
+
+  private _showContinuousTemperatureLine(): boolean {
+    return (
+      !!this.config?.forecast?.continuous_temperature_line &&
+      this.forecastType === "daily"
+    );
+  }
+
+  /**
+   * A single forecast entry spanning the temperature line's range, so the temperature
+   * scale is computed from the line instead of the daily highs and lows.
+   */
+  private _getTemperatureLineScaleData(
+    points: TemperatureLinePoint[]
+  ): ForecastAttribute[] {
+    const temperatures = points.map((p) => p.y);
+
+    return [
+      {
+        datetime: points[0]!.datetime.toISOString(),
+        temperature: Math.max(...temperatures),
+        templow: Math.min(...temperatures),
+      },
+    ];
+  }
+
+  /**
+   * Replaces the high and low temperature lines with one continuous line through the
+   * given points. The points are placed by time on a hidden linear axis aligned with the
+   * daily slots. Points at an assumed time of day are drawn hollow, and only each day's
+   * high and low point gets a label.
+   */
+  private _withTemperatureLine(
+    config: ChartConfiguration,
+    points: TemperatureLinePoint[],
+    slotCount: number,
+    style: CSSStyleDeclaration
+  ): ChartConfiguration {
+    const highTempLabelColor = style.getPropertyValue(
+      "--wfc-chart-temp-high-label-color"
+    );
+    const lowTempLabelColor = style.getPropertyValue(
+      "--wfc-chart-temp-low-label-color"
+    );
+    const assumedPointColor = style.getPropertyValue(
+      "--wfc-chart-temperature-line-assumed-point-color"
+    );
+    const lineStyle = this.getTemperatureLineStyle(style, "temperature");
+    const lineColor = (context: ScriptableContext<"line">) =>
+      this.computeTemperatureLineColor(
+        context,
+        style,
+        style.getPropertyValue("--wfc-chart-temp-high-line-color")
+      );
+    const isAssumed = (context: { dataIndex: number }) =>
+      !!points[context.dataIndex]?.assumed;
+    const isLow = (context: { dataIndex: number }) =>
+      points[context.dataIndex]?.label === "low";
+
+    const lineDataset: ChartDataset<"line"> = {
+      type: "line",
+      data: points.map((p) => ({ x: p.x, y: p.y })),
+      xAxisID: "xTime",
+      yAxisID: "yTemp",
+      ...lineStyle,
+      pointBackgroundColor: (context: ScriptableContext<"line">) =>
+        isAssumed(context) ? assumedPointColor : lineColor(context),
+      pointRadius: (context: ScriptableContext<"line">) =>
+        isAssumed(context) ? 3.5 : 3,
+      pointBorderWidth: (context: ScriptableContext<"line">) =>
+        isAssumed(context) ? 2 : 1,
+      datalabels: {
+        anchor: (context: Context) => (isLow(context) ? "start" : "end"),
+        align: (context: Context) => (isLow(context) ? "bottom" : "top"),
+        color: (context: Context) =>
+          isLow(context) ? lowTempLabelColor : highTempLabelColor,
+        formatter: (_value: unknown, context: Context) => {
+          const point = points[context.dataIndex];
+          return point?.label
+            ? `${formatTemperature(this.hass, this.weatherEntity, point.y, this.config.forecast?.temperature_precision, true)}°`
+            : null;
+        },
+      },
+    };
+
+    config.data.datasets.splice(0, 2, lineDataset);
+    config.options = merge({}, config.options, {
+      scales: {
+        xTime: {
+          type: "linear",
+          display: false,
+          min: -0.5,
+          max: slotCount - 0.5,
+          grid: { display: false },
+          ticks: { display: false },
+        },
+      },
+    });
+
+    return config;
   }
 
   private _getUVIndexConfig(

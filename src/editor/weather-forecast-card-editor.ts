@@ -416,6 +416,17 @@ export class WeatherForecastCardEditor
         optional: true,
       },
       {
+        name: "forecast.continuous_temperature_line",
+        selector: { boolean: {} },
+        default: false,
+        optional: true,
+      },
+      {
+        name: "forecast.temperature_line_entity",
+        optional: true,
+        selector: { entity: { domain: "weather" } },
+      },
+      {
         name: "forecast.hourly_group_size",
         optional: true,
         selector: { number: { min: 1, max: 4 } },
@@ -874,6 +885,10 @@ export class WeatherForecastCardEditor
         return "Show forecast attribute selector";
       case "forecast.show_precipitation_probability":
         return "Show precipitation probability";
+      case "forecast.continuous_temperature_line":
+        return "Continuous temperature line";
+      case "forecast.temperature_line_entity":
+        return "Temperature line entity";
       case "forecast.default_chart_attribute":
         return "Default chart forecast attribute";
       case "forecast.hourly_group_size":
@@ -939,6 +954,10 @@ export class WeatherForecastCardEditor
         return "When enabled and using chart mode, shows a selector above the forecast to choose which weather attribute to display.";
       case "forecast.show_precipitation_probability":
         return "When enabled and using chart mode, shows the precipitation probability below the precipitation amount.";
+      case "forecast.continuous_temperature_line":
+        return "When enabled and using chart mode, the daily forecast shows one temperature line through the hourly forecast instead of separate high and low lines.";
+      case "forecast.temperature_line_entity":
+        return "Optional weather entity whose hourly forecast is used for the continuous temperature line, for example one with a longer hourly forecast. Defaults to this card's weather entity.";
       case "forecast.default_chart_attribute":
         return "The forecast attribute to visualize by default in chart mode.";
       case "forecast.hourly_group_size":

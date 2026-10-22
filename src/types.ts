@@ -112,6 +112,8 @@ export interface WeatherForecastCardForecastConfig {
   show_attribute_selector?: boolean;
   default_chart_attribute?: ChartAttributes;
   show_precipitation_probability?: boolean;
+  continuous_temperature_line?: boolean;
+  temperature_line_entity?: string;
 }
 
 export interface WeatherForecastCardCurrentConfig {

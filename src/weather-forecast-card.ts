@@ -84,6 +84,7 @@ export class WeatherForecastCard extends LitElement {
   @state() private config?: WeatherForecastCardConfig;
   @state() private _dailyForecastEvent?: ForecastEvent | undefined;
   @state() private _hourlyForecastEvent?: ForecastEvent | undefined;
+  @state() private _temperatureLineForecastEvent?: ForecastEvent | undefined;
   @state() private _currentItemWidth!: number;
   @state() private _currentForecastType: ForecastType = "daily";
   @state() private _isScrollable = false;
@@ -92,6 +93,7 @@ export class WeatherForecastCard extends LitElement {
 
   private _dailySubscription?: ForecastSubscription;
   private _hourlySubscription?: ForecastSubscription;
+  private _temperatureLineSubscription?: ForecastSubscription;
   private _subscriptionRequestId = 0;
   private _subscriptionGeneration = 0;
   private _subscribed = false;
@@ -302,6 +304,7 @@ export class WeatherForecastCard extends LitElement {
       this.hasReferencedCurrentEntityChanged(changedProperties) ||
       changedProperties.has("_dailyForecastEvent") ||
       changedProperties.has("_hourlyForecastEvent") ||
+      changedProperties.has("_temperatureLineForecastEvent") ||
       changedProperties.has("_currentForecastType") ||
       changedProperties.has("_currentItemWidth") ||
       changedProperties.has("_isScrollable")
@@ -399,6 +402,7 @@ export class WeatherForecastCard extends LitElement {
                       .weatherEntity=${stateObject}
                       .forecast=${currentForecast}
                       .forecastType=${this._currentForecastType}
+                      .temperatureLineForecast=${this.getTemperatureLineForecast()}
                       .isTwiceDailyEntity=${isTwiceDailyEntity}
                       .itemWidth=${this._currentItemWidth}
                       .isScrollable=${this._isScrollable}
@@ -652,6 +656,7 @@ export class WeatherForecastCard extends LitElement {
 
     const dailySubscription = this._dailySubscription;
     const hourlySubscription = this._hourlySubscription;
+    const temperatureLineSubscription = this._temperatureLineSubscription;
 
     this._subscribed = false;
 
@@ -659,6 +664,7 @@ export class WeatherForecastCard extends LitElement {
     // accidentally unsubscribe handles already being retired by this generation.
     this._dailySubscription = undefined;
     this._hourlySubscription = undefined;
+    this._temperatureLineSubscription = undefined;
 
     // Once we have fully torn down while detached, stop listening for visibility
     // changes so a discarded card is not retained by the document-level listener.
@@ -673,6 +679,10 @@ export class WeatherForecastCard extends LitElement {
     await Promise.all([
       this.unsubscribeForecastSubscription(dailySubscription, "daily"),
       this.unsubscribeForecastSubscription(hourlySubscription, "hourly"),
+      this.unsubscribeForecastSubscription(
+        temperatureLineSubscription,
+        "hourly"
+      ),
     ]);
   }
 
@@ -750,10 +760,11 @@ export class WeatherForecastCard extends LitElement {
   private createForecastSubscription(
     forecastType: ForecastEvent["type"],
     callback: (event: ForecastEvent) => void,
-    onInvalidEntityId: () => void
+    onInvalidEntityId: () => void,
+    entityId: string = this.config!.entity
   ): ForecastSubscription {
     return Promise.resolve(
-      subscribeForecast(this.hass!, this.config!.entity, forecastType, callback)
+      subscribeForecast(this.hass!, entityId, forecastType, callback)
     ).catch((error: unknown) => {
       if (isInvalidEntityIdError(error)) {
         setTimeout(onInvalidEntityId, 2000);
@@ -867,6 +878,66 @@ export class WeatherForecastCard extends LitElement {
         }
       );
     }
+
+    const temperatureLineEntityId = this.getTemperatureLineEntityId();
+    const temperatureLineEntity = temperatureLineEntityId
+      ? this.hass.states[temperatureLineEntityId]
+      : undefined;
+
+    if (
+      temperatureLineEntityId &&
+      temperatureLineEntity &&
+      supportsForecastType(temperatureLineEntity, "hourly")
+    ) {
+      this._temperatureLineSubscription = this.createForecastSubscription(
+        "hourly",
+        (event) => {
+          if (!this.shouldHandleForecastEvent(subscriptionGeneration)) {
+            return;
+          }
+
+          this._temperatureLineForecastEvent = event;
+        },
+        () => {
+          this._temperatureLineForecastEvent = undefined;
+        },
+        temperatureLineEntityId
+      );
+    } else {
+      this._temperatureLineForecastEvent = undefined;
+    }
+  }
+
+  /**
+   * The separate weather entity whose hourly forecast feeds the continuous
+   * temperature line, or undefined when the card's own entity is used.
+   */
+  private getTemperatureLineEntityId(): string | undefined {
+    const forecastConfig = this.config?.forecast;
+    const entityId = forecastConfig?.temperature_line_entity;
+
+    return forecastConfig?.continuous_temperature_line &&
+      entityId &&
+      entityId !== this.config?.entity
+      ? entityId
+      : undefined;
+  }
+
+  /**
+   * The hourly forecast used for the continuous temperature line: the
+   * configured temperature line entity when it has data, otherwise the card's
+   * own hourly forecast (without grouping or slot limits).
+   */
+  private getTemperatureLineForecast(): ForecastAttribute[] | undefined {
+    if (!this.config?.forecast?.continuous_temperature_line) {
+      return undefined;
+    }
+
+    return (
+      this._temperatureLineForecastEvent?.forecast ??
+      this._hourlyForecastEvent?.forecast ??
+      undefined
+    );
   }
 
   private getCurrentForecast(): ForecastAttribute[] {
