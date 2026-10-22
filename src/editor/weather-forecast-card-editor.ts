@@ -422,7 +422,22 @@ export class WeatherForecastCardEditor
         optional: true,
       },
       {
-        name: "forecast.temperature_line_entity",
+        name: "forecast.hourly_precipitation",
+        default: "daily",
+        optional: true,
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: [
+              { value: "daily", label: "Daily bars" },
+              { value: "bars", label: "Bars per 3 hours" },
+              { value: "area", label: "Filled area" },
+            ],
+          },
+        },
+      },
+      {
+        name: "forecast.hourly_chart_entity",
         optional: true,
         selector: { entity: { domain: "weather" } },
       },
@@ -887,8 +902,10 @@ export class WeatherForecastCardEditor
         return "Show precipitation probability";
       case "forecast.continuous_temperature_line":
         return "Continuous temperature line";
-      case "forecast.temperature_line_entity":
-        return "Temperature line entity";
+      case "forecast.hourly_precipitation":
+        return "Precipitation in daily chart";
+      case "forecast.hourly_chart_entity":
+        return "Hourly chart entity";
       case "forecast.default_chart_attribute":
         return "Default chart forecast attribute";
       case "forecast.hourly_group_size":
@@ -956,8 +973,10 @@ export class WeatherForecastCardEditor
         return "When enabled and using chart mode, shows the precipitation probability below the precipitation amount.";
       case "forecast.continuous_temperature_line":
         return "When enabled and using chart mode, the daily forecast shows one temperature line through the hourly forecast instead of separate high and low lines.";
-      case "forecast.temperature_line_entity":
-        return "Optional weather entity whose hourly forecast is used for the continuous temperature line, for example one with a longer hourly forecast. Defaults to this card's weather entity.";
+      case "forecast.hourly_precipitation":
+        return "When using chart mode, shows the daily forecast's precipitation per 3 hours, as bars or a filled area, where hourly data is available. Days without hourly data keep their daily bar.";
+      case "forecast.hourly_chart_entity":
+        return "Optional weather entity whose hourly forecast is used for the continuous temperature line and hourly precipitation, for example one with a longer hourly forecast. Defaults to this card's weather entity.";
       case "forecast.default_chart_attribute":
         return "The forecast attribute to visualize by default in chart mode.";
       case "forecast.hourly_group_size":
@@ -1008,6 +1027,17 @@ export class WeatherForecastCardEditor
 
     if (newConfig?.forecast?.extra_attribute === "none") {
       delete newConfig.forecast.extra_attribute;
+    }
+
+    if (newConfig?.forecast?.hourly_precipitation === "daily") {
+      delete newConfig.forecast.hourly_precipitation;
+    }
+
+    // Rename forecast.temperature_line_entity (now forecast.hourly_chart_entity)
+    if (newConfig?.forecast?.temperature_line_entity) {
+      newConfig.forecast.hourly_chart_entity ??=
+        newConfig.forecast.temperature_line_entity;
+      delete newConfig.forecast.temperature_line_entity;
     }
 
     if (newConfig?.current?.attributes_layout === "default") {

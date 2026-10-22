@@ -9,8 +9,9 @@ import { ForecastAttribute } from "../src/data/weather";
 import {
   ASSUMED_HIGH_HOUR,
   ASSUMED_LOW_HOUR,
+  buildHourlyPrecipitation,
   buildTemperatureLine,
-} from "../src/data/temperature-line";
+} from "../src/data/hourly-chart";
 import { WfcForecastChart } from "../src/components/wfc-forecast-chart";
 import { Chart } from "chart.js";
 import { merge } from "lodash-es";
@@ -201,31 +202,60 @@ describe("chart continuous temperature line", () => {
     expect(xTime?.max).toBe(chart.data.labels!.length - 0.5);
   });
 
-  it("subscribes to the hourly forecast of the temperature line entity", async () => {
+  const expectHourlySubscription = (
+    subscribeMessage: ReturnType<typeof vi.spyOn>,
+    entityId: string
+  ) =>
+    expect(subscribeMessage).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ entity_id: entityId, forecast_type: "hourly" }),
+      expect.anything()
+    );
+
+  it("subscribes to the hourly forecast of the hourly chart entity", async () => {
     const subscribeMessage = vi.spyOn(hass.connection, "subscribeMessage");
 
     const { chartElement } = await createCard({
       continuous_temperature_line: true,
-      temperature_line_entity: "weather.open_meteo",
+      hourly_chart_entity: "weather.open_meteo",
     });
 
-    expect(subscribeMessage).toHaveBeenCalledWith(
-      expect.any(Function),
-      expect.objectContaining({
-        entity_id: "weather.open_meteo",
-        forecast_type: "hourly",
-      }),
-      expect.anything()
-    );
-    expect(chartElement.temperatureLineForecast?.length).toBeGreaterThan(0);
+    expectHourlySubscription(subscribeMessage, "weather.open_meteo");
+    expect(chartElement.hourlyChartForecast?.length).toBeGreaterThan(0);
 
     subscribeMessage.mockRestore();
   });
 
-  it("does not subscribe to the temperature line entity when the line is off", async () => {
+  it("subscribes to the hourly chart entity for hourly precipitation alone", async () => {
     const subscribeMessage = vi.spyOn(hass.connection, "subscribeMessage");
 
-    await createCard({ temperature_line_entity: "weather.open_meteo" });
+    await createCard({
+      hourly_precipitation: "area",
+      hourly_chart_entity: "weather.open_meteo",
+    });
+
+    expectHourlySubscription(subscribeMessage, "weather.open_meteo");
+
+    subscribeMessage.mockRestore();
+  });
+
+  it("still accepts the old temperature_line_entity name", async () => {
+    const subscribeMessage = vi.spyOn(hass.connection, "subscribeMessage");
+
+    await createCard({
+      continuous_temperature_line: true,
+      temperature_line_entity: "weather.open_meteo",
+    });
+
+    expectHourlySubscription(subscribeMessage, "weather.open_meteo");
+
+    subscribeMessage.mockRestore();
+  });
+
+  it("does not subscribe to the hourly chart entity when no hourly feature is on", async () => {
+    const subscribeMessage = vi.spyOn(hass.connection, "subscribeMessage");
+
+    await createCard({ hourly_chart_entity: "weather.open_meteo" });
 
     expect(subscribeMessage).not.toHaveBeenCalledWith(
       expect.any(Function),
@@ -234,5 +264,113 @@ describe("chart continuous temperature line", () => {
     );
 
     subscribeMessage.mockRestore();
+  });
+});
+
+describe("buildHourlyPrecipitation", () => {
+  it("sums the precipitation per 3 hours, placed at the middle of each interval", () => {
+    // Day 0 from 12:00 until day 2 at 01:00, 0.5 mm every hour.
+    const hourly = hourlyEntries(12, 38, () => 0).map((f) => ({
+      ...f,
+      precipitation: 0.5,
+    }));
+
+    const { intervals, hourlyDays } = buildHourlyPrecipitation(DAILY, hourly);
+
+    // Day 0 from 12:00 (4 intervals) and all of day 1 (8 intervals).
+    expect(intervals).toHaveLength(12);
+    expect(intervals.every((i) => i.precipitation === 1.5)).toBe(true);
+    expect(intervals[0]!.datetime.getTime()).toBe(at(0, 12).getTime());
+    expect(intervals[0]!.x).toBeCloseTo(13.5 / 24 - 0.5);
+
+    // Day 2 is not covered to its end, so it keeps its daily bar.
+    expect([...hourlyDays]).toEqual([0, 1]);
+  });
+
+  it("returns nothing without hourly precipitation", () => {
+    const { intervals, hourlyDays } = buildHourlyPrecipitation(
+      DAILY,
+      hourlyEntries(0, 72, () => 10)
+    );
+
+    expect(intervals).toEqual([]);
+    expect(hourlyDays.size).toBe(0);
+  });
+});
+
+describe("chart hourly precipitation", () => {
+  const mockHassInstance = new MockHass();
+  // Like Met.no: hourly data only for the next 48 hours.
+  mockHassInstance.hourlyForecast = mockHassInstance.hourlyForecast
+    .slice(0, 48)
+    .map((f) => ({ ...f, precipitation: 1 }));
+  const hass = mockHassInstance.getHass() as ExtendedHomeAssistant;
+
+  const createChart = async (
+    forecastConfig: WeatherForecastCardConfig["forecast"] = {}
+  ): Promise<Chart> => {
+    const config: WeatherForecastCardConfig = merge(
+      {},
+      {
+        type: "custom:weather-forecast-card-details",
+        entity: "weather.demo",
+        forecast: { mode: ForecastMode.Chart, show_sun_times: false },
+      },
+      { forecast: forecastConfig }
+    );
+
+    const { chart } = await createWeatherForecastCardTestFixture(hass, config);
+    chart!.resize = vi.fn();
+    chart!.update = vi.fn();
+
+    return chart as Chart;
+  };
+
+  const findHourlyDataset = (chart: Chart) =>
+    chart.data.datasets.find((d) => d.yAxisID === "yPrecipHourly");
+
+  it("keeps only the daily bars by default", async () => {
+    const chart = await createChart();
+
+    expect(findHourlyDataset(chart)).toBeUndefined();
+  });
+
+  it("adds 3-hour bars on the time axis", async () => {
+    const chart = await createChart({ hourly_precipitation: "bars" });
+    const hourly = findHourlyDataset(chart);
+
+    expect(hourly?.type).toBe("bar");
+    expect(hourly?.xAxisID).toBe("xTime");
+    expect(chart.options.scales?.xTime).toBeDefined();
+  });
+
+  it("adds a filled area on the time axis", async () => {
+    const chart = await createChart({ hourly_precipitation: "area" });
+    const hourly = findHourlyDataset(chart) as {
+      type?: string;
+      fill?: unknown;
+      data: { y: number }[];
+    };
+
+    expect(hourly.type).toBe("line");
+    expect(hourly.fill).toBe("origin");
+    // The area starts and ends at zero.
+    expect(hourly.data[0]!.y).toBe(0);
+    expect(hourly.data[hourly.data.length - 1]!.y).toBe(0);
+  });
+
+  it("hides the daily bars of days drawn hourly but keeps the others", async () => {
+    const chart = await createChart({ hourly_precipitation: "bars" });
+    const daily = chart.data.datasets.find((d) => d.yAxisID === "yPrecip")!;
+    const color = daily.backgroundColor as (context: {
+      dataIndex: number;
+    }) => string;
+
+    // The hourly forecast covers the first day, the daily forecast more days.
+    const colors = chart.data.labels!.map((_, dataIndex) =>
+      color({ dataIndex })
+    );
+    expect(colors[0]).toBe("transparent");
+    expect(colors[colors.length - 1]).not.toBe("transparent");
   });
 });

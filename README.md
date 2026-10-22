@@ -18,7 +18,9 @@ A custom weather card for Home Assistant that displays current weather and forec
 >
 > - `forecast.show_precipitation_probability` – shows the precipitation probability below the precipitation amount in chart mode.
 > - `current.secondary_info_attribute: sun_times` – shows today's sunrise and sunset times as the secondary info.
-> - `forecast.continuous_temperature_line` and `forecast.temperature_line_entity` – shows one continuous temperature line in the daily chart, see [Continuous temperature line](#continuous-temperature-line).
+> - `forecast.continuous_temperature_line` – shows one continuous temperature line in the daily chart, see [Continuous temperature line](#continuous-temperature-line).
+> - `forecast.hourly_precipitation` – shows precipitation per 3 hours in the daily chart, see [Hourly precipitation](#hourly-precipitation).
+> - `forecast.hourly_chart_entity` – a separate weather entity for the hourly data in the daily chart, see [Hourly chart entity](#hourly-chart-entity).
 >
 > The fork shares internal element names with the original card, so do not load both cards at the same time.
 
@@ -243,7 +245,8 @@ current:
 | `show_attribute_selector` | boolean | `false`                         | Displays a settings icon in the top-right corner of the chart for quick access to the attribute selector. The attribute selector is also accessible via hold action by default. See [Chart Attribute Selector](#chart-attribute-selector).                                            |
 | `default_chart_attribute` | string  | `temperature_and_precipitation` | The weather attribute to display by default in chart mode. See [Chart Attribute Selector](#chart-attribute-selector) for available values.                                                                                                                                            |
 | `continuous_temperature_line` | boolean | `false`                  | In chart mode, the daily forecast shows one continuous temperature line instead of separate high and low lines. See [Continuous temperature line](#continuous-temperature-line).                                                                                                    |
-| `temperature_line_entity` | string  | optional                        | Weather entity whose hourly forecast is used for the continuous temperature line. Defaults to the card's `entity`. Useful when the card's entity only has a short hourly forecast.                                                                                                     |
+| `hourly_precipitation`    | string  | optional                        | In chart mode, shows the daily forecast's precipitation per 3 hours: `bars` or `area`. See [Hourly precipitation](#hourly-precipitation).                                                                                                                                            |
+| `hourly_chart_entity`     | string  | optional                        | Weather entity whose hourly forecast is used for the continuous temperature line and hourly precipitation. Defaults to the card's `entity`. See [Hourly chart entity](#hourly-chart-entity). Previously named `temperature_line_entity`, which still works.                              |
 | `show_precipitation_probability` | boolean | `false`                  | Shows the precipitation probability below the precipitation amount when using forecast chart mode with the `temperature_and_precipitation` attribute. Probabilities below 10% are shown as `<10%`, and 0% is hidden. Requires a weather entity that provides `precipitation_probability`. |
 
 > [!IMPORTANT]
@@ -258,7 +261,18 @@ With `continuous_temperature_line: true`, the daily chart replaces the high and 
 - Where the hourly forecast ends (Met.no provides 48 hours), the line continues through each day's high and low from the daily forecast. These are placed at 05:00 (low) and 14:00 (high), and their dots are hollow because the actual times are not known.
 - The hourly view is unchanged.
 
-To get real hourly data for the whole week, set `temperature_line_entity` to a weather entity with a longer hourly forecast, such as the Open-Meteo integration (7 days). The rest of the card keeps using `entity`.
+### Hourly precipitation
+
+With `hourly_precipitation: bars` or `hourly_precipitation: area`, the daily chart shows precipitation summed per 3 hours from the hourly forecast, as thin bars or a filled area, instead of one bar per day:
+
+- The labels below the chart still show the daily total and probability from the daily forecast.
+- Days that the hourly forecast does not cover to the end keep their daily bar, so with Met.no the first two days show hourly precipitation and the rest daily bars.
+- Small amounts are drawn with a minimum height so they stay visible.
+- The hourly view is unchanged.
+
+### Hourly chart entity
+
+The continuous temperature line and hourly precipitation use the hourly forecast of the card's `entity`. To get hourly data for the whole week, set `hourly_chart_entity` to a weather entity with a longer hourly forecast, such as the Open-Meteo integration (7 days). Only the hourly data in the daily chart comes from it; the rest of the card keeps using `entity`.
 
 ```yaml
 type: custom:weather-forecast-card-details
@@ -266,7 +280,8 @@ entity: weather.forecast_home
 forecast:
   mode: chart
   continuous_temperature_line: true
-  temperature_line_entity: weather.open_meteo_home
+  hourly_precipitation: area
+  hourly_chart_entity: weather.open_meteo_home
 ```
 
 ### Forecast Actions
@@ -472,6 +487,7 @@ Add these variables to your Home Assistant theme to customize the card's appeara
 | `weather-forecast-card-chart-precipitation-label-color` | `var(--chart-label-color)`             | Chart label color for precipitation                                                                                        |
 | `weather-forecast-card-chart-precipitation-probability-label-color` | `var(--blue-color)`        | Chart label color for precipitation probability                                                                            |
 | `weather-forecast-card-chart-temperature-line-assumed-point-color` | `var(--card-background-color)` | Fill color of the hollow points at assumed times on the continuous temperature line                                |
+| `weather-forecast-card-chart-precipitation-area-line-color` | `var(--blue-color)`                  | Line color of the hourly precipitation area                                                                                |
 | `weather-forecast-card-chart-grid-color`                | Color mix 15% opaque text              | Chart grid line color                                                                                                      |
 | `weather-forecast-card-precipitation-bar-color`         | Color mix 40% blue                     | Precipitation bar color                                                                                                    |
 | `weather-forecast-card-sunrise-color`                   | `var(--orange-color, #ff9800)`         | Sunrise time indicator color                                                                                               |

@@ -16,6 +16,7 @@ import {
   DEFAULT_CHART_ATTRIBUTE,
   ExtendedHomeAssistant,
   ForecastActionDetails,
+  HourlyPrecipitationStyle,
   WeatherForecastCardConfig,
 } from "../types";
 import {
@@ -31,9 +32,12 @@ import {
 } from "../data/weather";
 import { getUvIndexColor } from "../data/uv-index";
 import {
+  buildHourlyPrecipitation,
   buildTemperatureLine,
+  HourlyPrecipitation,
+  PRECIPITATION_INTERVAL_HOURS,
   TemperatureLinePoint,
-} from "../data/temperature-line";
+} from "../data/hourly-chart";
 import {
   LineController,
   LineElement,
@@ -48,6 +52,7 @@ import {
   Color,
   ChartDataset,
   ChartOptions,
+  Filler,
 } from "chart.js";
 
 import "./wfc-forecast-header-items";
@@ -62,7 +67,8 @@ Chart.register(
   PointElement,
   LinearScale,
   CategoryScale,
-  ChartDataLabels
+  ChartDataLabels,
+  Filler
 );
 
 type ForecastLineType = "temperature" | "templow";
@@ -120,7 +126,7 @@ export class WfcForecastChart extends LitElement {
   @property({ attribute: false }) forecast: ForecastAttribute[] = [];
   @property({ attribute: false }) config!: WeatherForecastCardConfig;
   @property({ attribute: false }) forecastType!: ForecastType;
-  @property({ attribute: false }) temperatureLineForecast?: ForecastAttribute[];
+  @property({ attribute: false }) hourlyChartForecast?: ForecastAttribute[];
   @property({ attribute: false }) isTwiceDailyEntity = false;
   @property({ attribute: false }) itemWidth: number = 0;
   @property({ attribute: false }) isScrollable = false;
@@ -163,7 +169,7 @@ export class WfcForecastChart extends LitElement {
       changedProps.has("weatherEntity") ||
       changedProps.has("hass") ||
       changedProps.has("forecastType") ||
-      changedProps.has("temperatureLineForecast") ||
+      changedProps.has("hourlyChartForecast") ||
       changedProps.has("itemWidth");
 
     if (hasChanged && this.itemWidth > 0 && this.forecast?.length) {
@@ -468,8 +474,12 @@ export class WfcForecastChart extends LitElement {
     options: ChartOptions
   ): ChartConfiguration {
     const temperatureLine = this._showContinuousTemperatureLine()
-      ? buildTemperatureLine(data, this.temperatureLineForecast)
+      ? buildTemperatureLine(data, this.hourlyChartForecast)
       : [];
+    const hourlyPrecipitationStyle = this._getHourlyPrecipitationStyle();
+    const hourlyPrecipitation = hourlyPrecipitationStyle
+      ? buildHourlyPrecipitation(data, this.hourlyChartForecast)
+      : undefined;
     const { minTemp, maxTemp } = this.computeScaleLimits(
       temperatureLine.length
         ? this._getTemperatureLineScaleData(temperatureLine)
@@ -619,9 +629,157 @@ export class WfcForecastChart extends LitElement {
       }),
     };
 
-    return temperatureLine.length
+    let result = temperatureLine.length
       ? this._withTemperatureLine(config, temperatureLine, data.length, style)
       : config;
+
+    if (hourlyPrecipitationStyle && hourlyPrecipitation?.intervals.length) {
+      result = this._withHourlyPrecipitation(
+        result,
+        hourlyPrecipitation,
+        hourlyPrecipitationStyle,
+        data.length,
+        style
+      );
+    }
+
+    return result;
+  }
+
+  private _getHourlyPrecipitationStyle(): HourlyPrecipitationStyle | undefined {
+    return this.forecastType === "daily"
+      ? this.config?.forecast?.hourly_precipitation
+      : undefined;
+  }
+
+  /**
+   * Adds the hidden linear time axis the hourly data is placed on. It is aligned with the
+   * daily slots: `index - 0.5` is the start of a slot's day and `index + 0.5` its end.
+   */
+  private _withTimeAxis(
+    config: ChartConfiguration,
+    slotCount: number
+  ): ChartConfiguration {
+    // Chart.js groups bars by x axis, so the extra time axis would otherwise make the
+    // precipitation bars narrower and move them off the center of their slots.
+    for (const dataset of config.data.datasets) {
+      if (dataset.type === "bar") {
+        (dataset as ChartDataset<"bar">).grouped = false;
+      }
+    }
+
+    config.options = merge({}, config.options, {
+      scales: {
+        xTime: {
+          type: "linear",
+          display: false,
+          min: -0.5,
+          max: slotCount - 0.5,
+          grid: { display: false },
+          ticks: { display: false },
+        },
+      },
+    });
+
+    return config;
+  }
+
+  /**
+   * Draws precipitation per {@link PRECIPITATION_INTERVAL_HOURS} hours as bars or a filled
+   * area, for the days covered by hourly data. The daily bars of those days are hidden, but
+   * their amount and probability labels stay.
+   */
+  private _withHourlyPrecipitation(
+    config: ChartConfiguration,
+    precipitation: HourlyPrecipitation,
+    precipitationStyle: HourlyPrecipitationStyle,
+    slotCount: number,
+    style: CSSStyleDeclaration
+  ): ChartConfiguration {
+    const precipColor = style.getPropertyValue("--wfc-precipitation-bar-color");
+    const areaLineColor = style.getPropertyValue(
+      "--wfc-chart-precipitation-area-line-color"
+    );
+    const maxPrecip = getMaxPrecipitationForUnit(
+      getWeatherUnit(this.hass, this.weatherEntity, "precipitation"),
+      "hourly"
+    );
+
+    // Keep small amounts visible.
+    const minVisible = maxPrecip * 0.03;
+    const values = precipitation.intervals.map((interval) => ({
+      x: interval.x,
+      y:
+        interval.precipitation > 0
+          ? Math.max(interval.precipitation, minVisible)
+          : 0,
+    }));
+
+    for (const dataset of config.data.datasets) {
+      if (dataset.type === "bar" && dataset.yAxisID === "yPrecip") {
+        dataset.backgroundColor = (context: ScriptableContext<"bar">) =>
+          precipitation.hourlyDays.has(context.dataIndex)
+            ? "transparent"
+            : precipColor;
+      }
+    }
+
+    const halfInterval = PRECIPITATION_INTERVAL_HOURS / 24 / 2;
+    const first = values[0]!;
+    const last = values[values.length - 1]!;
+
+    const dataset: ChartDataset<"bar" | "line"> =
+      precipitationStyle === "area"
+        ? {
+            type: "line",
+            // Start and end at zero so the area closes at the edges of the hourly data.
+            data: [
+              { x: first.x - halfInterval, y: 0 },
+              ...values,
+              { x: last.x + halfInterval, y: 0 },
+            ],
+            fill: "origin",
+            backgroundColor: precipColor,
+            borderColor: areaLineColor,
+            borderWidth: 1.5,
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            cubicInterpolationMode: "monotone",
+          }
+        : {
+            type: "bar",
+            data: values,
+            backgroundColor: precipColor,
+            borderWidth: 0,
+            borderRadius: { topLeft: 2, topRight: 2 },
+            categoryPercentage: 1,
+            barPercentage: 0.8,
+          };
+
+    config.data.datasets.push({
+      ...dataset,
+      xAxisID: "xTime",
+      yAxisID: "yPrecipHourly",
+      order: 1,
+      datalabels: { display: false },
+    } as ChartDataset);
+
+    config.options = merge({}, config.options, {
+      scales: {
+        yPrecipHourly: {
+          type: "linear",
+          display: false,
+          position: "right",
+          beginAtZero: true,
+          suggestedMin: 0,
+          suggestedMax: maxPrecip,
+          grid: { display: false, drawOnChartArea: false },
+          ticks: { display: false },
+        },
+      },
+    });
+
+    return this._withTimeAxis(config, slotCount);
   }
 
   private _showContinuousTemperatureLine(): boolean {
@@ -713,27 +871,7 @@ export class WfcForecastChart extends LitElement {
 
     config.data.datasets.splice(0, 2, lineDataset);
 
-    // Chart.js groups bars by x axis, so the extra time axis would otherwise make the
-    // precipitation bars narrower and move them off the center of their slots.
-    for (const dataset of config.data.datasets) {
-      if (dataset.type === "bar") {
-        (dataset as ChartDataset<"bar">).grouped = false;
-      }
-    }
-    config.options = merge({}, config.options, {
-      scales: {
-        xTime: {
-          type: "linear",
-          display: false,
-          min: -0.5,
-          max: slotCount - 0.5,
-          grid: { display: false },
-          ticks: { display: false },
-        },
-      },
-    });
-
-    return config;
+    return this._withTimeAxis(config, slotCount);
   }
 
   private _getUVIndexConfig(

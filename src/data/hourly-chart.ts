@@ -44,14 +44,14 @@ const startOfNextLocalDay = (day: Date): Date =>
 const atLocalHour = (day: Date, hour: number): Date =>
   new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour);
 
-const isValidTemperature = (value: unknown): value is number =>
+const isValidNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
 
 const toTimedTemperatures = (
   forecast: ForecastAttribute[] | undefined
 ): TimedTemperature[] =>
   (forecast ?? [])
-    .filter((f) => isValidTemperature(f.temperature))
+    .filter((f) => isValidNumber(f.temperature))
     .map((f) => ({
       datetime: new Date(f.datetime),
       temperature: f.temperature,
@@ -134,7 +134,7 @@ export const buildTemperatureLine = (
     for (const { hour, temperature } of assumedTemperatures) {
       const datetime = atLocalHour(dayStart, hour);
       if (
-        isValidTemperature(temperature) &&
+        isValidNumber(temperature) &&
         (!lastHourlyTime || datetime > lastHourlyTime)
       ) {
         dayPoints.push(toPoint({ datetime, temperature }, true));
@@ -156,4 +156,102 @@ export const buildTemperatureLine = (
   });
 
   return points;
+};
+
+/** Length in hours of the intervals hourly precipitation is summed over. */
+export const PRECIPITATION_INTERVAL_HOURS = 3;
+
+const HOUR_MS = 60 * 60 * 1000;
+
+export type PrecipitationInterval = {
+  /** Position of the interval's middle on the daily chart, like {@link TemperatureLinePoint.x}. */
+  x: number;
+  /** Start of the interval. */
+  datetime: Date;
+  /** Precipitation summed over the interval. */
+  precipitation: number;
+};
+
+export type HourlyPrecipitation = {
+  intervals: PrecipitationInterval[];
+  /** Indexes of the daily slots drawn from hourly data. Other days keep their daily bar. */
+  hourlyDays: Set<number>;
+};
+
+/**
+ * Sums the hourly precipitation into {@link PRECIPITATION_INTERVAL_HOURS} hour
+ * intervals for the daily forecast chart.
+ *
+ * Only days the hourly data covers to their end are included, so the day the
+ * hourly data ends in (for example after the 48 hours Met.no provides), and the
+ * days after it, keep their daily precipitation bar.
+ *
+ * @param daily The daily forecast entries, one per chart slot.
+ * @param hourly The hourly forecast to take the precipitation from, if any.
+ */
+export const buildHourlyPrecipitation = (
+  daily: ForecastAttribute[],
+  hourly: ForecastAttribute[] | undefined
+): HourlyPrecipitation => {
+  const entries = (hourly ?? [])
+    .filter((f) => isValidNumber(f.precipitation))
+    .map((f) => ({
+      datetime: new Date(f.datetime),
+      precipitation: f.precipitation as number,
+    }))
+    .filter((e) => !isNaN(e.datetime.getTime()))
+    .sort((a, b) => a.datetime.getTime() - b.datetime.getTime());
+
+  const intervals: PrecipitationInterval[] = [];
+  const hourlyDays = new Set<number>();
+  const lastEntryTime = entries[entries.length - 1]?.datetime.getTime();
+
+  if (lastEntryTime === undefined) {
+    return { intervals, hourlyDays };
+  }
+
+  daily.forEach((dayForecast, index) => {
+    const dayStart = startOfLocalDay(new Date(dayForecast.datetime));
+    if (isNaN(dayStart.getTime())) {
+      return;
+    }
+
+    const dayEnd = startOfNextLocalDay(dayStart);
+    const dayLength = dayEnd.getTime() - dayStart.getTime();
+    const dayEntries = entries.filter(
+      (e) => e.datetime >= dayStart && e.datetime < dayEnd
+    );
+
+    if (!dayEntries.length || lastEntryTime < dayEnd.getTime() - HOUR_MS) {
+      return;
+    }
+
+    hourlyDays.add(index);
+
+    for (let hour = 0; hour < 24; hour += PRECIPITATION_INTERVAL_HOURS) {
+      const start = atLocalHour(dayStart, hour);
+      const end = atLocalHour(dayStart, hour + PRECIPITATION_INTERVAL_HOURS);
+      const intervalEntries = dayEntries.filter(
+        (e) => e.datetime >= start && e.datetime < end
+      );
+
+      // Skip intervals without data, such as the hours that have already passed today.
+      if (!intervalEntries.length) {
+        continue;
+      }
+
+      const middle = (start.getTime() + end.getTime()) / 2;
+
+      intervals.push({
+        x: index - 0.5 + (middle - dayStart.getTime()) / dayLength,
+        datetime: start,
+        precipitation: intervalEntries.reduce(
+          (sum, e) => sum + e.precipitation,
+          0
+        ),
+      });
+    }
+  });
+
+  return { intervals, hourlyDays };
 };

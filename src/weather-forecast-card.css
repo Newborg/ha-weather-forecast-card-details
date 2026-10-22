@@ -48,6 +48,10 @@
     --weather-forecast-card-chart-precipitation-probability-label-color,
     var(--blue-color, #2196f3)
   );
+  --wfc-chart-precipitation-area-line-color: var(
+    --weather-forecast-card-chart-precipitation-area-line-color,
+    var(--blue-color, #2196f3)
+  );
   --wfc-chart-temperature-line-assumed-point-color: var(
     --weather-forecast-card-chart-temperature-line-assumed-point-color,
     var(--card-background-color, #fff)

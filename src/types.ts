@@ -63,6 +63,11 @@ export const CHART_ATTRIBUTES = [
 
 export type ChartAttributes = (typeof CHART_ATTRIBUTES)[number];
 
+export const HOURLY_PRECIPITATION_STYLES = ["bars", "area"] as const;
+
+export type HourlyPrecipitationStyle =
+  (typeof HOURLY_PRECIPITATION_STYLES)[number];
+
 export const DEFAULT_CHART_ATTRIBUTE: ChartAttributes =
   "temperature_and_precipitation";
 
@@ -113,6 +118,9 @@ export interface WeatherForecastCardForecastConfig {
   default_chart_attribute?: ChartAttributes;
   show_precipitation_probability?: boolean;
   continuous_temperature_line?: boolean;
+  hourly_precipitation?: HourlyPrecipitationStyle;
+  hourly_chart_entity?: string;
+  /** @deprecated Use `hourly_chart_entity` instead */
   temperature_line_entity?: string;
 }
 
