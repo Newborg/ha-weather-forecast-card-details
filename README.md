@@ -23,6 +23,10 @@ This card is a fork of [Weather Forecast Card](https://github.com/troinine/ha-we
 - **Hourly precipitation** – `forecast.hourly_precipitation` shows precipitation per 3 hours as bars or a filled area in the daily chart. See [Hourly precipitation](#hourly-precipitation).
 - **Hourly chart entity** – `forecast.hourly_chart_entity` takes the hourly data for the daily chart from a separate weather entity, such as one with a 7-day hourly forecast. See [Hourly chart entity](#hourly-chart-entity).
 
+<div align="center">
+  <img src="https://raw.githubusercontent.com/Newborg/ha-weather-forecast-card-details/refs/heads/main/docs/weather-forecast-card-details.png" alt="Daily chart with a continuous temperature line, precipitation per 3 hours, precipitation probability, and sunrise and sunset times" width="500" style="border-radius: 12px;">
+</div>
+
 Changes from the original card are merged in from time to time. Please report problems with this fork in its own [issues](https://github.com/Newborg/ha-weather-forecast-card-details/issues), not in the original card's repository.
 
 > [!IMPORTANT]
