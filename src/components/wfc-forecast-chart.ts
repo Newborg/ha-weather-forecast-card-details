@@ -709,6 +709,14 @@ export class WfcForecastChart extends LitElement {
     };
 
     config.data.datasets.splice(0, 2, lineDataset);
+
+    // Chart.js groups bars by x axis, so the extra time axis would otherwise make the
+    // precipitation bars narrower and move them off the center of their slots.
+    for (const dataset of config.data.datasets) {
+      if (dataset.type === "bar") {
+        (dataset as ChartDataset<"bar">).grouped = false;
+      }
+    }
     config.options = merge({}, config.options, {
       scales: {
         xTime: {

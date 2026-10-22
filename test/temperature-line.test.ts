@@ -176,6 +176,8 @@ describe("chart continuous temperature line", () => {
       mockHassInstance.dailyForecast.length
     );
     expect(precipitation!.type).toBe("bar");
+    // Not grouped with the time axis, so the bars stay centered in their slots.
+    expect((precipitation as { grouped?: boolean }).grouped).toBe(false);
 
     const xTime = chart.options.scales?.xTime;
     expect(xTime?.min).toBe(-0.5);
