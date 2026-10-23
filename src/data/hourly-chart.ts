@@ -255,3 +255,43 @@ export const buildHourlyPrecipitation = (
 
   return { intervals, hourlyDays };
 };
+
+/**
+ * Removes the label (and so the dot) from the less extreme of two highs, or two
+ * lows, that are closer than `minGap` and whose labels would overlap. This is
+ * typically one day's low just before midnight and the next day's low just after,
+ * which together describe the same night.
+ *
+ * @param points The temperature line points, in time order. Labels are removed in place.
+ * @param minGap The smallest distance between two labels of the same kind, in chart
+ * slots (the same unit as {@link TemperatureLinePoint.x}).
+ */
+export const removeOverlappingLabels = (
+  points: TemperatureLinePoint[],
+  minGap: number
+): void => {
+  for (const label of ["high", "low"] as const) {
+    let previous: TemperatureLinePoint | undefined;
+
+    for (const point of points) {
+      if (point.label !== label) {
+        continue;
+      }
+
+      if (!previous || point.x - previous.x >= minGap) {
+        previous = point;
+        continue;
+      }
+
+      const pointIsMoreExtreme =
+        label === "high" ? point.y > previous.y : point.y < previous.y;
+
+      if (pointIsMoreExtreme) {
+        previous.label = undefined;
+        previous = point;
+      } else {
+        point.label = undefined;
+      }
+    }
+  }
+};

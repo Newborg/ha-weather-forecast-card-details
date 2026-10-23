@@ -11,6 +11,8 @@ import {
   ASSUMED_LOW_HOUR,
   buildHourlyPrecipitation,
   buildTemperatureLine,
+  removeOverlappingLabels,
+  TemperatureLinePoint,
 } from "../src/data/hourly-chart";
 import { WfcForecastChart } from "../src/components/wfc-forecast-chart";
 import { Chart } from "chart.js";
@@ -397,5 +399,54 @@ describe("chart hourly precipitation", () => {
     );
     expect(colors[0]).toBe("transparent");
     expect(colors[colors.length - 1]).not.toBe("transparent");
+  });
+});
+
+describe("removeOverlappingLabels", () => {
+  const point = (
+    x: number,
+    y: number,
+    label?: "high" | "low"
+  ): TemperatureLinePoint => ({
+    x,
+    y,
+    label,
+    datetime: new Date(0),
+    assumed: false,
+  });
+
+  it("keeps only the colder of two lows on either side of midnight", () => {
+    const mondayLow = point(4.46, 7.9, "low");
+    const tuesdayLow = point(4.54, 7.6, "low");
+    const points = [point(4.1, 11.9, "high"), mondayLow, tuesdayLow];
+
+    removeOverlappingLabels(points, 0.6);
+
+    expect(mondayLow.label).toBeUndefined();
+    expect(tuesdayLow.label).toBe("low");
+    expect(points[0]!.label).toBe("high");
+  });
+
+  it("keeps only the warmer of two highs that are close together", () => {
+    const first = point(1.4, 13, "high");
+    const second = point(1.6, 12, "high");
+
+    removeOverlappingLabels([first, second], 0.6);
+
+    expect(first.label).toBe("high");
+    expect(second.label).toBeUndefined();
+  });
+
+  it("keeps labels that are far enough apart, and a high next to a low", () => {
+    const points = [
+      point(0, 12, "high"),
+      point(0.2, 8, "low"),
+      point(1, 13, "high"),
+      point(1.9, 7, "low"),
+    ];
+
+    removeOverlappingLabels(points, 0.6);
+
+    expect(points.map((p) => p.label)).toEqual(["high", "low", "high", "low"]);
   });
 });

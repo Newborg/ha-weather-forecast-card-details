@@ -269,6 +269,7 @@ With `continuous_temperature_line: true`, the daily chart replaces the high and 
 
 - The line runs through a point every 3 hours, plus each day's warmest and coldest hour. Points are placed by time of day within each day.
 - Each day's highest temperature is marked with a dot and a label above the line, and its lowest with a dot and a label below it.
+- When two highs or two lows are so close that their labels would overlap, such as one day's low just before midnight and the next day's just after, only the more extreme one is labelled.
 - Where the hourly forecast ends (Met.no provides 48 hours), the line continues through each day's high and low from the daily forecast. These are placed at 05:00 (low) and 14:00 (high), and their dots are hollow because the actual times are not known.
 - The hourly view is unchanged.
 

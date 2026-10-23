@@ -36,6 +36,7 @@ import {
   buildTemperatureLine,
   HourlyPrecipitation,
   PRECIPITATION_INTERVAL_HOURS,
+  removeOverlappingLabels,
   TemperatureLinePoint,
 } from "../data/hourly-chart";
 import {
@@ -106,6 +107,9 @@ const CHART_LABEL_VERTICAL_PADDING = 10;
 
 // Default chart height in pixels at the baseline font size, used as a reference for scaling the chart height dynamically.
 const DEFAULT_CHART_HEIGHT = 130;
+
+// Approximate width of a temperature label such as "12.4°", in multiples of the font size.
+const TEMPERATURE_LABEL_WIDTH_EM = 3;
 
 // Extra pixels (on top of the font size) between the precipitation amount label and the
 // precipitation probability label shown below it.
@@ -850,8 +854,30 @@ export class WfcForecastChart extends LitElement {
       );
     const isAssumed = (context: { dataIndex: number }) =>
       !!points[context.dataIndex]?.assumed;
+    // Labels closer than their own width would overlap, and labels closer than half
+    // their width to the chart's edges would be cut off.
+    const labelWidth =
+      this.itemWidth > 0
+        ? (this._getChartFontSize() * TEMPERATURE_LABEL_WIDTH_EM) /
+          this.itemWidth
+        : 0;
+    removeOverlappingLabels(points, labelWidth);
+
     const isLow = (context: { dataIndex: number }) =>
       points[context.dataIndex]?.label === "low";
+    // Angle labels near the chart's edges inwards so they are not cut off.
+    const labelAlign = (context: Context): "top" | "bottom" | number => {
+      const x = points[context.dataIndex]?.x;
+      const low = isLow(context);
+
+      if (x !== undefined && x + 0.5 < labelWidth / 2) {
+        return low ? 45 : -45;
+      }
+      if (x !== undefined && slotCount - 0.5 - x < labelWidth / 2) {
+        return low ? 135 : -135;
+      }
+      return low ? "bottom" : "top";
+    };
     // Only the labelled high and low points get a dot, the others only shape the line.
     const pointRadius = (context: ScriptableContext<"line">) =>
       points[context.dataIndex]?.label ? (isAssumed(context) ? 3.5 : 3) : 0;
@@ -870,7 +896,7 @@ export class WfcForecastChart extends LitElement {
         isAssumed(context) ? 2 : 1,
       datalabels: {
         anchor: (context: Context) => (isLow(context) ? "start" : "end"),
-        align: (context: Context) => (isLow(context) ? "bottom" : "top"),
+        align: labelAlign,
         color: (context: Context) =>
           isLow(context) ? lowTempLabelColor : highTempLabelColor,
         formatter: (_value: unknown, context: Context) => {
